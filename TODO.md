@@ -32,10 +32,6 @@ as of commit `d1a8669`.
       reproduced, cause unknown. Watch for it; if it recurs, look at what
       could type into the Session name field during
       `createCampaignAndOpenSession`.
-- [ ] **Portfolio homepage logo placement, unconfirmed.** The tankard icon
-      sits in the margin to the left of the Daggerheart Brewery card
-      (portfolio commit `06fdc3d`, committed but NOT pushed). Confirm the
-      placement with Connor, then push.
 - [ ] **Party tile colours may read dark.** The Domain-colour fallback sits
       under the same dark tint that keeps white text readable over a
       photo. Flagged to Connor, no answer yet on whether to brighten it.
