@@ -12,7 +12,7 @@ import { communitiesApi } from '../api/communities';
 import { useApiList } from '../lib/useApiList';
 import { upsertById } from '../lib/upsert';
 import './PartyRoster.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 interface PartyRosterProps {
   campaignId: string;
@@ -80,7 +80,7 @@ export default function PartyRoster({ campaignId, sessionId, onChange, layout = 
       await partyMembersApi.remove(member.id, { sessionId });
       setMembers((prev) => prev.filter((m) => m.id !== member.id));
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not remove the party member.');
+      alertDialog(err instanceof Error ? err.message : 'Could not remove the party member.');
     }
   }
 

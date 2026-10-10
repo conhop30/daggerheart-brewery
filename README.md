@@ -585,18 +585,14 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       one click instead of one at a time
 
 **In progress / planned**
-- [ ] Same gallery/spotlight/`StatRail` treatment for the other
-      `ContentCard`-based pages (Weapons, Armor, Loot, Ancestries,
-      Communities, etc.) — this pass deliberately scoped to Adversaries &
-      Environments first
-- [ ] Fully designed galleries for Heritage and Optional Mechanics (a
-      shared card grid today, not yet the stat-gallery treatment)
-- [ ] A code-signing certificate for the packaged installer (still
-      self-signed — SmartScreen shows the "unknown publisher" warning)
-- [ ] Corebook Loot/Consumables and Hope & Fear Consumables — the source
-      tables' two-column layout defeated automated text-extraction parsing
-      accurately enough to trust; needs a manual pass or a different
-      extraction approach
+- [x] Tables as the default view: Equipment (Weapons, Armor, Loot,
+      Consumables) opens as a reference table, as Adversaries &
+      Environments do, with Cards one click away
+- [x] Every message the app raises (delete confirmations and errors
+      alike) uses the app's own dialog instead of a system pop-up
+- [ ] A table view for Heritage and Optional Mechanics (a shared card
+      grid today)
+- [ ] Corebook Loot/Consumables and Hope & Fear Consumables data
 
 ## Getting Started
 

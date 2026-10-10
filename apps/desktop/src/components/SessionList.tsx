@@ -4,7 +4,7 @@ import { ContentCard, ContentCardList, MetaChip } from './ContentCard';
 import SessionForm from './SessionForm';
 import { upsertById } from '../lib/upsert';
 import './SessionList.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 /** How many Sessions show before the list scrolls — about the height of a full Party of six beside it. */
 const MAX_VISIBLE = 7;
@@ -84,7 +84,7 @@ export default function SessionList({ campaignId, onOpenSession }: SessionListPr
       setSessions((prev) => upsertById(prev, copy));
       onOpenSession(copy);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not clone the Session.');
+      alertDialog(err instanceof Error ? err.message : 'Could not clone the Session.');
     } finally {
       setCloning(false);
     }
@@ -96,7 +96,7 @@ export default function SessionList({ campaignId, onOpenSession }: SessionListPr
       await sessionsApi.remove(session.id);
       setSessions((prev) => prev.filter((s) => s.id !== session.id));
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete the Session.');
+      alertDialog(err instanceof Error ? err.message : 'Could not delete the Session.');
     }
   }
 

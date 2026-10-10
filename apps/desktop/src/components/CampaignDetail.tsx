@@ -7,7 +7,7 @@ import PartyRoster from './PartyRoster';
 import SessionList from './SessionList';
 import { gradientForColor } from '../lib/color';
 import './CampaignDetail.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 interface CampaignDetailProps {
   campaign: Campaign;
@@ -48,7 +48,7 @@ export default function CampaignDetail({
       await campaignsApi.remove(campaign.id);
       onCampaignDeleted(campaign.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete the Campaign.');
+      alertDialog(err instanceof Error ? err.message : 'Could not delete the Campaign.');
     }
   }
 

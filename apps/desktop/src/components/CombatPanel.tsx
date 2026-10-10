@@ -10,6 +10,7 @@ import SessionAdversaryTile from './SessionAdversaryTile';
 import SessionAdversaryStackTile from './SessionAdversaryStackTile';
 import SessionEnvironmentTile from './SessionEnvironmentTile';
 import './CombatPanel.css';
+import { alertDialog } from '../lib/confirm';
 
 // A drag shows CombatPanel's own outlined card instead of the browser's
 // snapshot of the tile, so the snapshot is swapped for nothing: one
@@ -361,7 +362,7 @@ export default function CombatPanel({
           await sessionEnvironmentsApi.update(e.id, { combatId: firstCombatId }, { sessionId });
         }
       } catch (err) {
-        window.alert(err instanceof Error ? err.message : 'Could not move older Environments into the first Combat tab.');
+        alertDialog(err instanceof Error ? err.message : 'Could not move older Environments into the first Combat tab.');
       }
     })();
   }, [firstCombatId, loading, sessionEnvironments, sessionId]);
@@ -380,7 +381,7 @@ export default function CombatPanel({
       const pulled = await sessionEnvironmentsApi.create({ sessionId, environmentId, combatId: activeCombatId });
       setSessionEnvironments((prev) => [...prev, pulled]);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not pull that Environment in.');
+      alertDialog(err instanceof Error ? err.message : 'Could not pull that Environment in.');
     }
   }
 
@@ -389,7 +390,7 @@ export default function CombatPanel({
     try {
       await sessionEnvironmentsApi.update(environment.id, patch, { sessionId });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that change.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that change.');
     }
   }
 
@@ -398,7 +399,7 @@ export default function CombatPanel({
     try {
       await sessionEnvironmentsApi.remove(environment.id, { sessionId });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not push that Environment out.');
+      alertDialog(err instanceof Error ? err.message : 'Could not push that Environment out.');
     }
   }
 

@@ -11,7 +11,7 @@ export function loadEquipmentView(): EquipmentView {
   } catch {
     // localStorage can be unavailable; the default is fine.
   }
-  return 'cards';
+  return 'table';
 }
 
 export function saveEquipmentView(view: EquipmentView): void {

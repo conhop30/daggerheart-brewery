@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { upsertById } from './upsert';
-import { confirmDialog } from './confirm';
+import { alertDialog, confirmDialog } from './confirm';
 
 // Every browse page below needs one to four of these — same loading/error/
 // unmount-guard boilerplate each time, so it's a hook instead of copy-paste.
@@ -72,7 +72,7 @@ export function useEntityActions<T extends { id: string; name: string }>(
         list.remove(id);
         setEditingId((current) => (current === id ? null : current));
       } catch (err) {
-        window.alert(err instanceof Error ? err.message : `Could not delete the ${label}.`);
+        alertDialog(err instanceof Error ? err.message : `Could not delete the ${label}.`);
       }
     },
     // list.remove is a fresh closure every render, but it only ever calls

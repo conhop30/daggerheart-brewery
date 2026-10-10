@@ -21,7 +21,7 @@ import { useMusicContext } from '../context/MusicContext';
 import { useDragReorder } from '../lib/useDragReorder';
 import { loadSectionOrder, saveSectionOrder, type SessionSectionId } from '../lib/sessionSectionOrder';
 import './SessionView.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 const SECTION_TITLES: Record<SessionSectionId, string> = {
   ADVERSARIES: 'Adversaries',
@@ -155,7 +155,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         setCombats(sorted);
         setActiveCombatId((prev) => (prev && sorted.some((c) => c.id === prev) ? prev : sorted[0]?.id ?? null));
       })
-      .catch((err) => window.alert(err instanceof Error ? err.message : 'Could not load this session’s Combat tabs.'))
+      .catch((err) => alertDialog(err instanceof Error ? err.message : 'Could not load this session’s Combat tabs.'))
       .finally(() => {
         if (!cancelled) setCombatsLoading(false);
       });
@@ -178,7 +178,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         setActiveCombatId(created.id);
       })
       .catch((err) => {
-        window.alert(err instanceof Error ? err.message : 'Could not create this session’s first Combat tab.');
+        alertDialog(err instanceof Error ? err.message : 'Could not create this session’s first Combat tab.');
       })
       // Re-armed either way: the guard only has to cover the in-flight
       // window, and it must fire again when the last tab is deleted later.
@@ -205,7 +205,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
           await sessionAdversariesApi.update(a.id, { combatId: firstCombatId }, { sessionId: session.id });
         }
       } catch (err) {
-        window.alert(err instanceof Error ? err.message : 'Could not move older Adversaries into the first Combat tab.');
+        alertDialog(err instanceof Error ? err.message : 'Could not move older Adversaries into the first Combat tab.');
       }
     })();
   }, [firstCombatId, adversariesLoading, sessionAdversaries, session.id]);
@@ -242,7 +242,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         setSessionAdversaries((prev) => [...prev, pulled]);
       }
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not pull that Adversary in.');
+      alertDialog(err instanceof Error ? err.message : 'Could not pull that Adversary in.');
     }
   }
 
@@ -279,7 +279,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         setSessionAdversaries((prev) => [...prev, created]);
       }
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not record that Minion as slain.');
+      alertDialog(err instanceof Error ? err.message : 'Could not record that Minion as slain.');
     }
   }
 
@@ -306,7 +306,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         else await handleAdversaryChange(record, op.patch);
       }
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not regroup those Minions.');
+      alertDialog(err instanceof Error ? err.message : 'Could not regroup those Minions.');
     }
   }
 
@@ -336,7 +336,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
           if (op.kind === 'remove') await sessionAdversariesApi.remove(op.id, { sessionId: session.id });
         }
       })
-      .catch((err) => window.alert(err instanceof Error ? err.message : 'Could not stack those Adversaries.'));
+      .catch((err) => alertDialog(err instanceof Error ? err.message : 'Could not stack those Adversaries.'));
   }
 
   async function handleCombatChange(combat: Combat, patch: UpdateCombatRequest) {
@@ -344,7 +344,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       await combatsApi.update(combat.id, patch, { sessionId: session.id });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that change.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that change.');
     }
   }
 
@@ -355,7 +355,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
       try {
         await combatsApi.update(next[i].id, { order: i }, { sessionId: session.id });
       } catch (err) {
-        window.alert(err instanceof Error ? err.message : 'Could not save that reorder.');
+        alertDialog(err instanceof Error ? err.message : 'Could not save that reorder.');
       }
     }
   }
@@ -365,7 +365,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       await combatsApi.update(combat.id, { name }, { sessionId: session.id });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not rename that tab.');
+      alertDialog(err instanceof Error ? err.message : 'Could not rename that tab.');
     }
   }
 
@@ -379,7 +379,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
       setCombats((prev) => [...prev, created]);
       setActiveCombatId(created.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not create that tab.');
+      alertDialog(err instanceof Error ? err.message : 'Could not create that tab.');
     }
   }
 
@@ -402,7 +402,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         return next;
       });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete that tab.');
+      alertDialog(err instanceof Error ? err.message : 'Could not delete that tab.');
     }
   }
 
@@ -411,7 +411,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       await sessionAdversariesApi.update(adversary.id, patch, { sessionId: session.id });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that change.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that change.');
     }
   }
 
@@ -420,7 +420,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       await sessionAdversariesApi.remove(adversary.id, { sessionId: session.id });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not push that Adversary out.');
+      alertDialog(err instanceof Error ? err.message : 'Could not push that Adversary out.');
     }
   }
 
@@ -432,7 +432,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       onSessionSaved(await sessionsApi.addLoot(session.id, entry));
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that roll.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that roll.');
     }
   }
 
@@ -440,7 +440,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
     try {
       onSessionSaved(await sessionsApi.removeLoot(session.id, entryId));
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not remove that entry.');
+      alertDialog(err instanceof Error ? err.message : 'Could not remove that entry.');
     }
   }
 
@@ -462,7 +462,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
       const saved = await sessionsApi.update(session.id, patch);
       onSessionSaved(saved);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that change.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that change.');
     }
   }
 
@@ -473,7 +473,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
       clearIfSession(session.id);
       onSessionDeleted(session.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete the Session.');
+      alertDialog(err instanceof Error ? err.message : 'Could not delete the Session.');
     }
   }
 

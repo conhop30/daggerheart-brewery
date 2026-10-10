@@ -250,13 +250,60 @@ test.describe('Electron app', () => {
     await expect(win.locator('.set-filter:visible')).toHaveCount(1);
   });
 
-  test('Equipment offers Cards or Table', async () => {
+  test('Equipment offers Cards or Table, and opens as a table', async () => {
     await win.click('.app-shell__nav-link:has-text("Equipment")');
     await expect(win.locator('.mode-toggle__option')).toHaveText(['Cards', 'Table']);
-    await win.click('.mode-toggle__option:has-text("Table")');
     await expect(win.locator('.mode-toggle__option--active')).toHaveText('Table');
-    // Remembered between launches, so put it back for whoever runs next.
+
+    await win.getByRole('button', { name: '+ New Loot', exact: true }).click();
+    await win.fill('.create-form input[type="text"]', 'Trinket');
+    await win.click('button:has-text("Create Loot")');
+    await expect(win.locator('.equipment-table')).toContainText('Trinket');
+
+    // Cards is still a click away, and is remembered.
     await win.click('.mode-toggle__option:has-text("Cards")');
+    await expect(win.locator('.content-card', { hasText: 'Trinket' })).toBeVisible();
+    await win.reload();
+    await win.click('.app-shell__nav-link:has-text("Equipment")');
+    await expect(win.locator('.mode-toggle__option--active')).toHaveText('Cards');
+  });
+
+  test('a failed action is reported in the app\'s own dialog, not a system pop-up', async () => {
+    const systemDialogs: string[] = [];
+    win.on('dialog', (dialog) => systemDialogs.push(dialog.message()));
+    // Answered by hand here, so each box can be looked at first.
+    await win.removeLocatorHandler(win.locator('.confirm-dialog'));
+
+    await win.click('.app-shell__nav-link:has-text("Equipment")');
+    await win.getByRole('button', { name: '+ New Loot', exact: true }).click();
+    await win.fill('.create-form input[type="text"]', 'Trinket');
+    await win.click('button:has-text("Create Loot")');
+    await expect(win.locator('.equipment-table')).toContainText('Trinket');
+
+    // Every delete now fails, as a full disk would make it.
+    await app.evaluate(({ ipcMain }) => {
+      ipcMain.removeHandler('store:remove');
+      ipcMain.handle('store:remove', () => {
+        throw new Error('Disk is full.');
+      });
+    });
+
+    await win.locator('.equipment-table').getByRole('button', { name: 'Delete' }).click();
+    const box = win.locator('.confirm-dialog');
+    await expect(box.locator('.confirm-dialog__cancel')).toBeVisible();
+    await box.locator('.confirm-dialog__confirm').click();
+
+    // The same box, reporting instead of asking: one button, no Cancel.
+    await expect(box).toHaveClass(/confirm-dialog--notice/);
+    await expect(box.locator('.confirm-dialog__title')).toHaveText('Something went wrong');
+    await expect(box.locator('.confirm-dialog__detail')).toContainText('Disk is full.');
+    await expect(box.locator('.confirm-dialog__cancel')).toHaveCount(0);
+    await expect(box.locator('.confirm-dialog__confirm')).toHaveText('OK');
+    await box.locator('.confirm-dialog__confirm').click();
+    await expect(box).toHaveCount(0);
+
+    await expect(win.locator('.equipment-table')).toContainText('Trinket');
+    expect(systemDialogs).toEqual([]);
   });
 
   test('Adversaries has a Table view whose rows open in place', async () => {

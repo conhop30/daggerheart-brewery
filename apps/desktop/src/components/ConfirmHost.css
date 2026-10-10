@@ -80,6 +80,22 @@
   filter: brightness(1.1);
 }
 
+/* A notice's one button dismisses rather than destroys, so it isn't red. */
+.confirm-dialog--notice .confirm-dialog__confirm {
+  background: none;
+  border-color: var(--hairline);
+  color: var(--ink);
+}
+
+.confirm-dialog--notice .confirm-dialog__confirm:hover {
+  filter: none;
+  border-color: var(--ink);
+}
+
+.confirm-dialog__detail {
+  overflow-wrap: anywhere;
+}
+
 .confirm-dialog__confirm:focus-visible,
 .confirm-dialog__cancel:focus-visible {
   outline: 2px solid var(--hope);

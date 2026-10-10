@@ -4,7 +4,7 @@ import { noteTabsApi, type NoteTab } from '../api/noteTabs';
 import type { Session } from '../api/sessions';
 import TabBar, { type Tab } from './TabBar';
 import './SessionNotesPanel.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 /** SessionView sets this when a Combat tab is clicked — `key` changes on every click, so re-clicking the same tab still counts. */
 export interface NotesTabSignal {
@@ -65,7 +65,7 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
         setLegacyNotes(journal.find((e) => e.kind === 'SESSION' && e.label.trim() === session.name.trim())?.notes ?? '');
         setActiveId((prev) => (sorted.some((t) => t.id === prev) ? prev : sorted[0]?.id ?? UNSAVED));
       })
-      .catch((err) => window.alert(err instanceof Error ? err.message : 'Could not load this session’s Notes.'))
+      .catch((err) => alertDialog(err instanceof Error ? err.message : 'Could not load this session’s Notes.'))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
@@ -97,7 +97,7 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
   }, [tabSignal]);
 
   function fail(err: unknown, fallback: string) {
-    window.alert(err instanceof Error ? err.message : fallback);
+    alertDialog(err instanceof Error ? err.message : fallback);
   }
 
   // Turns the not-yet-saved first tab into a real one, so there is

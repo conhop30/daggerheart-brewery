@@ -3,7 +3,7 @@ import { EVERYWHERE_REGION_ID, musicApi, type MusicRegion, type MusicTrack } fro
 import { useMusicContext } from '../context/MusicContext';
 import { defaultCandidates } from './music';
 import { loadVolume, saveVolume } from './musicVolume';
-import { confirmDialog } from './confirm';
+import { alertDialog, confirmDialog } from './confirm';
 
 interface UseMusicLibraryEditorOptions {
   /** Called after every successful mutation — lets an embedding context (MusicContext, when this runs inside a live Session) pick up the change immediately instead of waiting for its own next refetch. */
@@ -100,7 +100,7 @@ export function useMusicLibraryEditor({ onLibraryChanged, scopeCampaignId = null
   }, [volume, previewTrack?.volume]);
 
   function fail(err: unknown, fallback: string) {
-    window.alert(err instanceof Error ? err.message : fallback);
+    alertDialog(err instanceof Error ? err.message : fallback);
   }
 
   function togglePreview(trackId: string) {

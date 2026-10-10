@@ -12,6 +12,7 @@ import AdversarySheet from '../components/AdversarySheet';
 import EnvironmentSheet from '../components/EnvironmentSheet';
 import './BrowsePage.css';
 import './AdversariesEnvironmentsPage.css';
+import { alertDialog } from '../lib/confirm';
 
 // Memoized — StatGallery re-renders on every search keystroke/filter click
 // (its own internal state), calling renderTile for every item each time;
@@ -69,7 +70,7 @@ const AdversarySpotlight = memo(function AdversarySpotlight({
     try {
       await exportNodeAsImage(sheetRef.current, a.name);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not export image.');
+      alertDialog(err instanceof Error ? err.message : 'Could not export image.');
     } finally {
       setExporting(false);
     }
@@ -138,7 +139,7 @@ const EnvironmentSpotlight = memo(function EnvironmentSpotlight({
     try {
       await exportNodeAsImage(sheetRef.current, e.name);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not export image.');
+      alertDialog(err instanceof Error ? err.message : 'Could not export image.');
     } finally {
       setExporting(false);
     }

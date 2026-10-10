@@ -9,65 +9,38 @@ Everything completed up to v1.8.0 was cleared out of this file on
 `AI_MEMORY.md` still points at by name) are in git history: see `TODO.md`
 as of commit `d1a8669`.
 
-## Loose ends from the v1.8.0 round
+## Open
 
-- [ ] **Remaining Subclass pictures.** Beastbound, Plague Doctor, Poisoners
-      Guild, School of Knowledge and Stalwart have none yet. They go in
-      Connor's own `~/.daggerheart-hub/subclass-backdrops/` folder, named
-      after the Subclass (`stalwart.jpg`). Never in the repo or a release:
-      the pictures are official art kept private on purpose.
-- [ ] **Error pop-ups still use the system dialog.** Only delete
-      confirmations moved to the app's own dialog (`lib/confirm` +
-      `ConfirmHost`). The ~40 `window.alert` calls ("Could not save that
-      change" and the like) are untouched. Decide whether they should be
-      restyled too, and as a dialog or as something quieter (a toast).
-- [ ] **Portfolio music screenshot is pre-1.8.** The demo data set used for
-      the v1.8.0 screenshots has no audio, so the Music slide on the
-      portfolio page is the old image, and the narrow in-session music
-      screenshot was dropped. Reshoot both with a couple of demo tracks.
-- [ ] **One unexplained e2e flake.** "a quantity stepper on the Adversary
-      picker adds several copies in one click" (`e2e/sessions.spec.ts`)
-      failed once in a full run with the Session title reading
-      "Session 1-------", then passed on every rerun with no change. Not
-      reproduced, cause unknown. Watch for it; if it recurs, look at what
-      could type into the Session name field during
-      `createCampaignAndOpenSession`.
-- [ ] **Party tile colours may read dark.** The Domain-colour fallback sits
-      under the same dark tint that keeps white text readable over a
-      photo. Flagged to Connor, no answer yet on whether to brighten it.
-
-## Loose ends from the 2026-10-08 feedback round (v1.8.1)
-
-- [ ] **Condense / Standard / Expand are still there.** Table is the
-      default for Adversaries and Environments (Connor's call), and the
-      other three modes remain as options. Ask whether any should go once
-      he has used the table for a while.
+- [ ] **Unreleased since v1.8.1.** Error messages in the app's own dialog
+      (`alertDialog`), Equipment opening as a table, and the repo rename
+      (the new address in the updater and release script) have not been
+      cut as a version.
 - [ ] **A collapsed stack still lists every member's row.** Collapse All
       hides HP/Stress on single tiles, but a stack's rows are its trackers
-      and stay. Not asked for; noted in case it reads as inconsistent.
+      and stay. Connor wants to revisit how stacking behaves; keep this
+      with that conversation.
+- [ ] **Customised dialogs and messages.** Every pop-up now shares one
+      style (`lib/confirm` + `ConfirmHost`: `confirmDialog` asks,
+      `alertDialog` reports). That was step one. Next, per Connor: lean
+      into purpose-built behaviour and displays (a quieter toast for a
+      failed save, say) instead of one box for everything. The file
+      pickers (export, import, add music) are still the operating
+      system's own and can't be restyled.
+- [ ] **Portfolio screenshots are v1.8.0.** They don't show the Table
+      views, the Heritage layout or Collapse All.
+- [ ] **Heritage and Optional Mechanics: a table too?** Equipment and
+      Adversaries & Environments open as tables. These two are a card
+      grid. Asked Connor on 2026-10-10 whether he wants a table view
+      there as well; no answer yet.
 
-## Carried over (also on the README roadmap)
+## Waiting on Connor
 
-- [ ] **Galleries for the other content pages.** Weapons, Armor, Loot,
-      Ancestries, Communities and the rest still use the plain
-      `ContentCard` list; only Adversaries & Environments got the gallery /
-      spotlight / `StatRail` treatment.
-- [ ] **Designed pages for Heritage and Optional Mechanics.** Both are now
-      the same card grid (`EntrySection`: alphabetical, Set filter,
-      full-width features), fixed up after Connor's 2026-10-08 feedback,
-      but not the gallery treatment the roadmap means.
-- [ ] **A code-signing certificate** for the installer. It is self-signed,
-      so SmartScreen shows the "unknown publisher" warning.
-- [ ] **Corebook Loot/Consumables and Hope & Fear Consumables.** The source
-      tables' two-column layout defeated automated text extraction; needs
-      a manual pass or a different extraction approach.
+- [ ] **Corebook Loot/Consumables and Hope & Fear Consumables.** Connor
+      will supply the data himself. Don't attempt to extract it.
 
-## Waiting on a decision from Connor
+## Parked (Connor's call, don't raise again unprompted)
 
-- [ ] **Rename the GitHub repo** from `daggerheart-hub` to match
-      "Daggerheart Brewery"? Left alone so far because it changes every
-      public link (releases, the updater feed, the portfolio).
-- [ ] **Faster verification runs** (low priority). Each Electron launch
-      costs about half a second. Ideas noted: batch more checks into one
-      launch, or drive the Vite dev server in a plain browser where
-      Electron itself isn't what's being tested.
+- Condense / Standard / Expand stay as options beside Table.
+- Party tile colours stay as they are (not brightening yet).
+- The one-off "Session 1-------" e2e flake: ignore unless it recurs.
+- Faster verification runs: low priority.

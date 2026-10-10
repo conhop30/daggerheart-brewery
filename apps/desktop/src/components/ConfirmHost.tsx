@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { onConfirmRequest, splitConfirmMessage, type ConfirmRequest } from '../lib/confirm';
 import './ConfirmHost.css';
 
-// Draws whatever lib/confirm's confirmDialog() is currently asking. Mounted
-// once for the whole app (main.tsx), above everything else on screen.
+// Draws whatever lib/confirm's confirmDialog() is currently asking, or its
+// alertDialog() is reporting. Mounted once for the whole app (main.tsx),
+// above everything else on screen.
 export default function ConfirmHost() {
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
 
@@ -19,13 +20,18 @@ export default function ConfirmHost() {
   }, [request]);
 
   if (!request) return null;
-  const { title, detail } = splitConfirmMessage(request.message);
+  const notice = request.kind === 'notice';
+  // A notice's message is whatever went wrong, in the store's own words, so
+  // it reads as the line under a fixed heading.
+  const { title, detail } = notice
+    ? { title: 'Something went wrong', detail: request.message }
+    : splitConfirmMessage(request.message);
 
   return (
     // A click on the dimmed page behind is a "no", same as Escape.
     <div className="confirm-dialog__scrim" onMouseDown={() => request.resolve(false)}>
       <div
-        className="confirm-dialog"
+        className={`confirm-dialog${notice ? ' confirm-dialog--notice' : ''}`}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
@@ -36,9 +42,11 @@ export default function ConfirmHost() {
         </h2>
         {detail && <p className="confirm-dialog__detail">{detail}</p>}
         <div className="confirm-dialog__actions">
-          <button type="button" className="confirm-dialog__cancel" onClick={() => request.resolve(false)}>
-            Cancel
-          </button>
+          {!notice && (
+            <button type="button" className="confirm-dialog__cancel" onClick={() => request.resolve(false)}>
+              Cancel
+            </button>
+          )}
           {/* Focused, so Enter goes ahead — as it did on the native box. */}
           <button type="button" className="confirm-dialog__confirm" autoFocus onClick={() => request.resolve(true)}>
             {request.confirmLabel}

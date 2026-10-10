@@ -6,7 +6,7 @@ import SimpleNameDescriptionForm from './SimpleNameDescriptionForm';
 import ItemPicker from './ItemPicker';
 import NumberInput from './NumberInput';
 import './TableDetail.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 interface PickableItem {
   id: string;
@@ -109,7 +109,7 @@ export default function TableDetail<E extends { position: number }>({
       await remove(table.id);
       onDeleted(table.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : `Could not delete the ${itemLabel} Table.`);
+      alertDialog(err instanceof Error ? err.message : `Could not delete the ${itemLabel} Table.`);
     }
   }
 

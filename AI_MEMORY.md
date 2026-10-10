@@ -194,6 +194,19 @@ the result out. Adversary type is now required on the form (not in
 being run** (Connor's call) — see `TODO.md`'s entry, and run it before
 building further on Session-page code.
 
+After v1.8.1 (2026-10-10): no `window.alert` or `window.confirm` is left
+in `src` — errors go through `alertDialog` and questions through
+`confirmDialog` (both `lib/confirm`, both drawn by `ConfirmHost`; a notice
+is the same box with one OK button, which still carries
+`.confirm-dialog__confirm` so the e2e locator handler dismisses it).
+Equipment's view defaults to the table. The GitHub repo was renamed
+`daggerheart-hub` -> `daggerheart-brewery`; the local folder, the
+`~/.daggerheart-hub` data directory, `daggerheart-hub-spec.md` and the
+portfolio's `/projects/daggerheart-hub/` address keep the old name on
+purpose. The installer is self-signed (SmartScreen shows "unknown
+publisher"); Connor considers code-signing important to remember but it is
+deliberately not a TODO or roadmap item.
+
 v1.8.1 (2026-10-08, full suites green: 295 Vitest, 105 Playwright) added
 a Table mode to `StatGallery`, the default wherever `tableColumns` is
 passed (Adversaries and Environments); the chosen mode is kept in

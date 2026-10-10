@@ -3,6 +3,7 @@ import { sessionsApi, type Session } from '../api/sessions';
 import { useMusicContext } from '../context/MusicContext';
 import SessionMusicPanel from './SessionMusicPanel';
 import './CampaignMusicSidebar.css';
+import { alertDialog } from '../lib/confirm';
 
 interface CampaignMusicSidebarProps {
   campaignId: string;
@@ -39,7 +40,7 @@ export default function CampaignMusicSidebar({ campaignId, session }: CampaignMu
     try {
       await sessionsApi.update(session.id, { regionId });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save that change.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save that change.');
     }
   }
 

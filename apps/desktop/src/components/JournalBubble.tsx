@@ -9,7 +9,7 @@ import { KIND_DEFS, kindLabelOf } from '../lib/journalKinds';
 import { JournalEntryFields } from './JournalEntryFields';
 import JournalFloatingNote from './JournalFloatingNote';
 import './JournalBubble.css';
-import { confirmDialog } from '../lib/confirm';
+import { alertDialog, confirmDialog } from '../lib/confirm';
 
 const NOTE_SIZE = { width: 260, height: 320 };
 
@@ -199,7 +199,7 @@ export default function JournalBubble({ onOpenCampaign }: JournalBubbleProps) {
       setEntries((prev) => [...prev, created]);
       setDetailEntryId(created.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not open that Session’s notes.');
+      alertDialog(err instanceof Error ? err.message : 'Could not open that Session’s notes.');
     }
   }
 
@@ -211,7 +211,7 @@ export default function JournalBubble({ onOpenCampaign }: JournalBubbleProps) {
       setEntries((prev) => [...prev, created]);
       setDetailEntryId(created.id);
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not create the entry.');
+      alertDialog(err instanceof Error ? err.message : 'Could not create the entry.');
     }
   }
 
@@ -220,7 +220,7 @@ export default function JournalBubble({ onOpenCampaign }: JournalBubbleProps) {
       const saved = await journalApi.update(id, patch);
       setEntries((prev) => prev.map((e) => (e.id === id ? saved : e)));
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not save the entry.');
+      alertDialog(err instanceof Error ? err.message : 'Could not save the entry.');
     }
   }
 
@@ -241,7 +241,7 @@ export default function JournalBubble({ onOpenCampaign }: JournalBubbleProps) {
         return next;
       });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not delete the entry.');
+      alertDialog(err instanceof Error ? err.message : 'Could not delete the entry.');
     }
   }
 
@@ -283,7 +283,7 @@ export default function JournalBubble({ onOpenCampaign }: JournalBubbleProps) {
         return [...others, ...saved];
       });
     } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Could not reorder the entries.');
+      alertDialog(err instanceof Error ? err.message : 'Could not reorder the entries.');
     }
   }
 
