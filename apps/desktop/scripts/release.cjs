@@ -28,7 +28,7 @@ const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf
 const tag = `v${version}`;
 const installer = `Daggerheart-Brewery-Setup-${version}.exe`;
 const outDir = path.join(os.tmpdir(), `dh-release-${version}`);
-const REPO = 'conhop30/daggerheart-hub';
+const REPO = 'conhop30/daggerheart-brewery';
 
 function fail(message) {
   console.error(`\nRelease stopped: ${message}`);

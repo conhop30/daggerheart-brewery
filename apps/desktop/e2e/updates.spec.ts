@@ -26,7 +26,7 @@ test.describe('Update check (notify-only fallback)', () => {
       res.end(
         JSON.stringify({
           tag_name: latestTag,
-          html_url: `https://github.com/conhop30/daggerheart-hub/releases/tag/${latestTag}`,
+          html_url: `https://github.com/conhop30/daggerheart-brewery/releases/tag/${latestTag}`,
         })
       );
     });
@@ -132,7 +132,7 @@ test.describe('Update flow (asks before updating)', () => {
       res.end(
         JSON.stringify({
           tag_name: 'v9.9.9',
-          html_url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v9.9.9',
+          html_url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v9.9.9',
         })
       );
     });

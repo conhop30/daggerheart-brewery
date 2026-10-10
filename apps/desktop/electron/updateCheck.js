@@ -13,9 +13,9 @@
 // API's `{ tag_name, html_url }` is still understood, which is what the tests
 // and DAGGERHEART_UPDATE_URL fake servers send.
 
-const DEFAULT_URL = 'https://github.com/conhop30/daggerheart-hub/releases/latest';
+const DEFAULT_URL = 'https://github.com/conhop30/daggerheart-brewery/releases/latest';
 // The only place the app will ever send someone who clicks "Download".
-const RELEASES_PAGE_PREFIX = 'https://github.com/conhop30/daggerheart-hub/releases';
+const RELEASES_PAGE_PREFIX = 'https://github.com/conhop30/daggerheart-brewery/releases';
 
 /** "v1.2.3" / "1.2.3-beta" -> [1, 2, 3]. Missing or non-numeric parts count as 0. */
 function parseVersion(v) {

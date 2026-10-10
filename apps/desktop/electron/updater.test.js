@@ -107,7 +107,7 @@ describe('when the app can update itself', () => {
     const autoUpdater = fakeAutoUpdater({ checkForUpdates: vi.fn(async () => { throw new Error('no latest.yml'); }) });
     const { manager, fallbackCheck } = setup({
       autoUpdater,
-      fallback: { updateAvailable: true, latestVersion: '2.0.0', url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v2.0.0' },
+      fallback: { updateAvailable: true, latestVersion: '2.0.0', url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v2.0.0' },
     });
     await manager.check();
     expect(fallbackCheck).toHaveBeenCalled();
@@ -117,7 +117,7 @@ describe('when the app can update itself', () => {
 });
 
 describe('when the app cannot update itself (dev build, unsigned macOS, ...)', () => {
-  const url = 'https://github.com/conhop30/daggerheart-hub/releases/tag/v2.0.0';
+  const url = 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v2.0.0';
 
   it('still announces a newer release, and "download" opens the release page', async () => {
     const { manager, openReleasePage } = setup({

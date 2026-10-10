@@ -31,10 +31,10 @@ describe('version comparison', () => {
 
 describe('isSafeReleaseUrl', () => {
   it('only accepts this project\'s releases page', () => {
-    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-hub/releases/tag/v1.1.0')).toBe(true);
-    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-hub/releases')).toBe(true);
-    expect(isSafeReleaseUrl('https://evil.example/conhop30/daggerheart-hub/releases')).toBe(false);
-    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-hub/releases.evil.com')).toBe(false);
+    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.1.0')).toBe(true);
+    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-brewery/releases')).toBe(true);
+    expect(isSafeReleaseUrl('https://evil.example/conhop30/daggerheart-brewery/releases')).toBe(false);
+    expect(isSafeReleaseUrl('https://github.com/conhop30/daggerheart-brewery/releases.evil.com')).toBe(false);
     expect(isSafeReleaseUrl(undefined)).toBe(false);
   });
 });
@@ -45,21 +45,21 @@ describe('checkForUpdate', () => {
       currentVersion: '1.0.0',
       fetchImpl: fakeFetch({
         tag_name: 'v1.1.0',
-        html_url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v1.1.0',
+        html_url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.1.0',
       }),
     });
     expect(result).toEqual({
       currentVersion: '1.0.0',
       latestVersion: '1.1.0',
       updateAvailable: true,
-      url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v1.1.0',
+      url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.1.0',
     });
   });
 
   it('reports up to date when versions match', async () => {
     const result = await checkForUpdate({
       currentVersion: '1.1.0',
-      fetchImpl: fakeFetch({ tag_name: 'v1.1.0', html_url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v1.1.0' }),
+      fetchImpl: fakeFetch({ tag_name: 'v1.1.0', html_url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.1.0' }),
     });
     expect(result.updateAvailable).toBe(false);
   });
@@ -70,7 +70,7 @@ describe('checkForUpdate', () => {
       fetchImpl: fakeFetch({ tag_name: 'v9.0.0', html_url: 'https://evil.example/download.exe' }),
     });
     expect(result.updateAvailable).toBe(true);
-    expect(result.url).toBe('https://github.com/conhop30/daggerheart-hub/releases');
+    expect(result.url).toBe('https://github.com/conhop30/daggerheart-brewery/releases');
   });
 
   it('turns HTTP errors, bad payloads, and network failures into a quiet "no update"', async () => {
@@ -103,20 +103,20 @@ describe('checkForUpdate via the latest-release redirect (no API rate limit)', (
   it('reads the tag from the redirect target and reports a newer release', async () => {
     const result = await checkForUpdate({
       currentVersion: '1.0.0',
-      fetchImpl: redirectTo('https://github.com/conhop30/daggerheart-hub/releases/tag/v1.2.0'),
+      fetchImpl: redirectTo('https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.2.0'),
     });
     expect(result).toEqual({
       currentVersion: '1.0.0',
       latestVersion: '1.2.0',
       updateAvailable: true,
-      url: 'https://github.com/conhop30/daggerheart-hub/releases/tag/v1.2.0',
+      url: 'https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.2.0',
     });
   });
 
   it('reports up to date when the redirect points at the running version', async () => {
     const result = await checkForUpdate({
       currentVersion: '1.2.0',
-      fetchImpl: redirectTo('/conhop30/daggerheart-hub/releases/tag/v1.2.0'),
+      fetchImpl: redirectTo('/conhop30/daggerheart-brewery/releases/tag/v1.2.0'),
     });
     expect(result.updateAvailable).toBe(false);
     expect(result.latestVersion).toBe('1.2.0');
@@ -128,7 +128,7 @@ describe('checkForUpdate via the latest-release redirect (no API rate limit)', (
       currentVersion: '1.0.0',
       fetchImpl: async (_url, opts) => {
         options = opts;
-        return redirectTo('https://github.com/conhop30/daggerheart-hub/releases/tag/v1.0.0')();
+        return redirectTo('https://github.com/conhop30/daggerheart-brewery/releases/tag/v1.0.0')();
       },
     });
     expect(options.redirect).toBe('manual');
@@ -137,7 +137,7 @@ describe('checkForUpdate via the latest-release redirect (no API rate limit)', (
   it('a project with no releases (redirects to the releases list) is "no update", not a crash', async () => {
     const result = await checkForUpdate({
       currentVersion: '1.0.0',
-      fetchImpl: redirectTo('https://github.com/conhop30/daggerheart-hub/releases'),
+      fetchImpl: redirectTo('https://github.com/conhop30/daggerheart-brewery/releases'),
     });
     expect(result).toMatchObject({ updateAvailable: false, error: 'No release found' });
   });
@@ -148,6 +148,6 @@ describe('checkForUpdate via the latest-release redirect (no API rate limit)', (
       fetchImpl: redirectTo('https://evil.example/x/releases/tag/v9.0.0'),
     });
     expect(result.updateAvailable).toBe(true);
-    expect(result.url).toBe('https://github.com/conhop30/daggerheart-hub/releases');
+    expect(result.url).toBe('https://github.com/conhop30/daggerheart-brewery/releases');
   });
 });

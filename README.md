@@ -29,7 +29,7 @@ and a working, installable Windows/macOS/Linux build via `electron-builder`.
 
 ## Download
 
-A Windows installer is on the [Releases page](https://github.com/conhop30/daggerheart-hub/releases/latest)
+A Windows installer is on the [Releases page](https://github.com/conhop30/daggerheart-brewery/releases/latest)
 (also linked from the [portfolio page](https://conhop30.github.io/projects/daggerheart-hub/)).
 It isn't code-signed, so SmartScreen may ask you to choose "More info" then
 "Run anyway". A fresh install ships with only the 9 Domains and 9 Classes
