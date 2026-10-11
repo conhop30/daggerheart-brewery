@@ -126,7 +126,8 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
 
       <p className="create-form__hint">
         In any text below: **bold**, *italic*, start a line with &ldquo;- &rdquo; for a bullet or &ldquo;### &rdquo; for a
-        sub-heading. Each new line is a new paragraph.
+        sub-heading. Each new line is a new paragraph. In a section of entries, a first entry with no heading replaces
+        the line printed under the section&rsquo;s title.
       </p>
 
       <CollapsibleSection title={`The Pitch${filled(pitch)}`} defaultOpen={!isEditing}>

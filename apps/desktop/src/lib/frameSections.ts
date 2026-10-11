@@ -9,7 +9,11 @@ export interface FrameEntrySection {
   title: string;
   /** Singular, for the editor's "+ Add" button. */
   itemLabel: string;
-  /** The line the rulebook prints under the section's heading, telling the GM what the section is for. */
+  /**
+   * The line the rulebook prints under the section's heading, telling the GM
+   * what the section is for. A frame overrides it by starting the section
+   * with an entry that has no heading.
+   */
   intro: string;
   allowTables: boolean;
 }

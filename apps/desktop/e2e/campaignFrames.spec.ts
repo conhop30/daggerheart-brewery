@@ -159,6 +159,19 @@ test.describe('Campaign Frames', () => {
 
     await expect(win.locator('.frame-view__title:visible')).toHaveText('The Witherwild');
     await expect(section('gmPrinciples').locator('.frame-entry__heading')).toHaveText('Paint the World in Contrast');
+    await expect(section('gmPrinciples').locator('.frame-section__intro')).toContainText('Keep the following guidance in mind');
+
+    // A first entry with no heading speaks for the section in place of that stock line.
+    await win.getByRole('button', { name: 'Edit Frame' }).click();
+    await openFormSection('Ancestries');
+    await form().getByRole('button', { name: '+ Add ancestry note' }).click();
+    await form().getByLabel('ancestry note text').fill('Only *clanks* are available.');
+    await form().getByRole('button', { name: '+ Add ancestry note' }).click();
+    await form().getByLabel('ancestry note heading').last().fill('Clanks');
+    await form().getByRole('button', { name: 'Save Changes' }).click();
+    await expect(section('ancestries').locator('.frame-section__intro')).toHaveText('Only clanks are available.');
+    await expect(section('ancestries').locator('.frame-entry')).toHaveCount(1);
+    await expect(section('ancestries').locator('.frame-entry__heading')).toHaveText('Clanks');
 
     // Cancelling an edit changes nothing.
     await win.getByRole('button', { name: 'Edit Frame' }).click();

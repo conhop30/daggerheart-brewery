@@ -42,11 +42,14 @@ function FrameTableView({ table }: { table: FrameTable }) {
                 </th>
               </tr>
             )}
-            <tr>
-              {table.columns.map((column, i) => (
-                <th key={i}>{column}</th>
-              ))}
-            </tr>
+            {/* A plain numbered list (a d20 of prompts, say) has no column names to show. */}
+            {table.columns.some((column) => column.trim()) && (
+              <tr>
+                {table.columns.map((column, i) => (
+                  <th key={i}>{column}</th>
+                ))}
+              </tr>
+            )}
           </thead>
           <tbody>
             {table.rows.map((row, r) => (
@@ -173,11 +176,16 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
   for (const section of FRAME_ENTRY_SECTIONS) {
     const entries = frame[section.key];
     if (entries.length === 0) continue;
+    // A frame that says something of its own under the heading ("Only these
+    // ancestries are available...") writes it as a first entry with no
+    // heading; that takes the place of the stock line.
+    const [first, ...rest] = entries;
+    const ownIntro = !first.heading && first.body && first.questions.length === 0 && first.tables.length === 0;
     sections.push({
       id: section.key,
       title: section.title,
-      intro: section.intro,
-      content: entries.map((entry, i) => <FrameEntryView key={i} entry={entry} />),
+      intro: ownIntro ? first.body : section.intro,
+      content: (ownIntro ? rest : entries).map((entry, i) => <FrameEntryView key={i} entry={entry} />),
     });
   }
   if (frame.incitingIncident) {
@@ -267,7 +275,11 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
                 }}
               >
                 <h2 className="frame-section__title">{section.title}</h2>
-                {section.intro && <p className="frame-section__intro">{section.intro}</p>}
+                {section.intro && (
+                  <p className="frame-section__intro">
+                    <FrameText text={section.intro} inline />
+                  </p>
+                )}
                 {section.content}
               </section>
             ))}
