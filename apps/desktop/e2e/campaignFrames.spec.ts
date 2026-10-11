@@ -351,6 +351,42 @@ test.describe('Campaign Frames', () => {
     expect(await markdownBox().inputValue()).toContain('\n\\page\n');
   });
 
+  test('the Guide shows an example frame without touching the one being written', async () => {
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill('Mine');
+    await form().getByRole('button', { name: 'Advanced' }).click();
+    await markdownBox().fill('# My Own Words\n\nNot to be replaced.');
+    const preview = win.locator('.brew-editor__preview .page');
+    await expect(preview.first().locator('h1')).toHaveText('My Own Words');
+
+    await form().getByRole('tab', { name: 'Guide' }).click();
+    const guide = form().getByLabel('Guide Markdown');
+    await expect(guide).toHaveAttribute('readonly', '');
+    await expect(guide).toHaveValue(/\{\{titlePage\}\}[\s\S]*# Headings[\s\S]*# Tables[\s\S]*# Stains[\s\S]*# Watercolor Edges/);
+
+    // The pages beside it are the guide's: four of them, none over-full,
+    // with a real stain, table, masked picture and title page among them.
+    await expect(preview).toHaveCount(4);
+    await expect(preview.first().locator('.titlePage')).toHaveCount(1);
+    await expect(preview.first().locator('h1')).toHaveText('Writing a Frame');
+    await expect(preview.nth(2).locator('.wide table')).toHaveCount(1);
+    await expect(preview.nth(2).locator('[class*="watercolor"]')).toHaveCount(1);
+    await expect(preview.nth(3).locator('.imageMaskEdge3 img')).toHaveCount(1);
+    await expect.poll(() => preview.nth(3).locator('.imageMaskEdge3 img').evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(640);
+    await expect(win.locator('.brew-editor__overflow')).toHaveCount(0);
+    // \page and \column are shown in the guide as text, not obeyed where they are being described.
+    await expect(preview.nth(1)).toContainText('to start a new page');
+
+    // Back on Text, the frame is exactly as it was, and that is what gets saved.
+    await form().getByRole('tab', { name: 'Text' }).click();
+    await expect(markdownBox()).toHaveValue('# My Own Words\n\nNot to be replaced.');
+    await expect(preview).toHaveCount(1);
+    await form().getByRole('tab', { name: 'Guide' }).click();
+    await form().getByRole('button', { name: 'Create Campaign Frame' }).click();
+    await expect(pages()).toHaveCount(1);
+    await expect(pages().first().locator('h1')).toHaveText('My Own Words');
+  });
+
   test('a picture added to the app is shown inside a watercolor edge', async () => {
     // A real 2x2 PNG, brought in the way a dropped file is.
     const source = path.join(tempDir, 'swamp.png');

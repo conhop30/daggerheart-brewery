@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type DragEvent } from 'react';
 import { apiClient, type FrameImage } from '../api/client';
 import { alertDialog } from '../lib/confirm';
+import { BREW_GUIDE } from '../lib/brewGuide';
 import { autoPaginate } from '../lib/brewPaginate';
 import * as snippets from '../lib/brewSnippets';
 import BrewPages from './BrewPages';
@@ -42,7 +43,8 @@ export default function BrewEditor({
   coverImage,
   onStartFromSections,
 }: BrewEditorProps) {
-  const [tab, setTab] = useState<'text' | 'style'>('text');
+  const [tab, setTab] = useState<'text' | 'style' | 'guide'>('text');
+  const [copied, setCopied] = useState(false);
   const [overflowing, setOverflowing] = useState<number[]>([]);
   // The pages lag the typing a little: laying out a long document on every
   // keystroke would make the text box stutter.
@@ -115,7 +117,38 @@ export default function BrewEditor({
           <button type="button" role="tab" aria-selected={tab === 'style'} className="brew-editor__tab" onClick={() => setTab('style')}>
             Style
           </button>
+          <button type="button" role="tab" aria-selected={tab === 'guide'} className="brew-editor__tab" onClick={() => setTab('guide')}>
+            Guide
+          </button>
         </div>
+
+        {/* The guide is a fixed example shown in place of the frame's own
+            text and pages while this tab is open. Nothing here can change
+            the frame: the box is read-only and feeds no state. */}
+        {tab === 'guide' && (
+          <>
+            <p className="create-form__hint">
+              An example frame that shows how to write each thing the Daggerheart books do. It is only being shown: your
+              own frame is untouched, and is back as you left it on the Text tab.
+            </p>
+            <textarea className="brew-editor__text" aria-label="Guide Markdown" readOnly spellCheck={false} value={BREW_GUIDE} />
+            <button
+              type="button"
+              className="brew-editor__start"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(BREW_GUIDE);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 2000);
+                } catch {
+                  alertDialog('Could not copy the guide. Select the text and copy it by hand.');
+                }
+              }}
+            >
+              {copied ? 'Copied' : 'Copy the guide’s text'}
+            </button>
+          </>
+        )}
 
         {tab === 'text' && (
           <>
@@ -193,9 +226,9 @@ export default function BrewEditor({
           </p>
         )}
         <BrewPages
-          markdown={shown.markdown}
-          styleCss={shown.styleCss}
-          frameName={frameName}
+          markdown={tab === 'guide' ? BREW_GUIDE : shown.markdown}
+          styleCss={tab === 'guide' ? '' : shown.styleCss}
+          frameName={tab === 'guide' ? 'Writing a Frame' : frameName}
           coverImage={coverImage}
           onOverflow={handleOverflow}
         />

@@ -236,7 +236,11 @@ already had an `IMAGE_TYPES` (backdrops), a second `const` of that name
 stops the app opening at all; the toggles here use `.frame-toggle*`, not
 `.mode-toggle*`, because Equipment's tests count those; DOMPurify lets any
 `data:` URI through on `<img>` unless hooked. Homebrewery's 5e theme is
-deliberately not copied.
+deliberately not copied. The editor's Guide tab shows `lib/brewGuide.ts`'s
+constant `BREW_GUIDE` read-only; keep each of its pages within a page (the
+e2e test fails if one overflows), and note that a `\page` or `\column`
+line is obeyed even inside a code fence, so the guide only ever names them
+inline.
 
 After v1.8.1 (2026-10-10): no `window.alert` or `window.confirm` is left
 in `src` — errors go through `alertDialog` and questions through

@@ -241,6 +241,10 @@ mechanics it uses; see `public/THIRD_PARTY_NOTICES.txt`.
   `printToPDF`, one sheet per page.
 - **A structured frame converts** (`lib/frameToMarkdown`) and keeps its
   sections, so it can switch back.
+- **A built-in Guide** (`lib/brewGuide.ts`): a fixed example frame, source
+  beside result, covering every construct. It is a constant shown in place
+  of the frame's own text while its tab is open; it feeds no state, so it
+  cannot overwrite what is being written.
 
 ### Session Builder (complete, and growing)
 
