@@ -14,6 +14,8 @@ test.describe('Campaign Frames', () => {
       Object.entries(process.env).filter((entry): entry is [string, string] => entry[1] !== undefined)
     );
     env.DAGGERHEART_STORE_DIR = tempDir;
+    // Stands in for Export PDF's Save dialog.
+    env.DAGGERHEART_PDF_PATH = path.join(tempDir, 'frame.pdf');
     delete env.ELECTRON_RUN_AS_NODE;
     app = await electron.launch({ args: [path.resolve('.')], env });
     win = await app.firstWindow();
@@ -235,5 +237,224 @@ test.describe('Campaign Frames', () => {
     await expect(win.locator('.campaign-detail__frame')).toHaveCount(0);
     await win.getByRole('button', { name: 'Edit Campaign' }).click();
     await expect(win.locator('.campaigns-page:visible .create-form').getByLabel('Campaign Frame')).toHaveValue('');
+  });
+
+  // ---- The Advanced format: the frame as Markdown, drawn as letter-size two-column pages ----
+
+  const pages = () => win.locator('.frame-view__pages .page');
+  const markdownBox = () => form().getByLabel('Frame Markdown');
+
+  /** A new frame switched to Advanced, with the given Markdown typed in, saved and open. */
+  async function createAdvancedFrame(name: string, markdown: string) {
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill(name);
+    await form().getByRole('button', { name: 'Advanced' }).click();
+    await markdownBox().fill(markdown);
+    await form().getByRole('button', { name: 'Create Campaign Frame' }).click();
+    await expect(win.locator('.frame-view__bar-title h1')).toHaveText(name);
+  }
+
+  test('an Advanced frame is Markdown drawn as two-column pages, with stains, in its own styles', async () => {
+    await createAdvancedFrame(
+      'Stains',
+      [
+        '# Overview',
+        '',
+        'Before **the age** of Cresting.',
+        '',
+        '{{watercolor3,top:20px,left:30px,width:300px,background-color:#BBAD82,opacity:80%}}',
+        '',
+        '\\column',
+        '',
+        '## Aterra',
+        '',
+        'The right-hand column.',
+        '',
+        '\\page',
+        '',
+        '# Campaign Mechanics',
+        '',
+        '<script>window.pwned = true</script>',
+        '',
+        '| Tier | Start |',
+        '|:--|:--|',
+        '| I | 3 |',
+      ].join('\n')
+    );
+
+    await expect(pages()).toHaveCount(2);
+    const first = pages().first();
+    await expect(first.locator('h1')).toHaveText('Overview');
+    await expect(first.locator('strong')).toHaveText('the age');
+    await expect(pages().nth(1).locator('td')).toHaveText(['I', '3']);
+    expect(await win.evaluate(() => (window as unknown as { pwned?: boolean }).pwned)).toBeUndefined();
+
+    // Two real columns: what follows \column starts level with the top, to the right.
+    const left = await first.locator('h1').boundingBox();
+    const right = await first.locator('h2').boundingBox();
+    expect(right!.x).toBeGreaterThan(left!.x + 100);
+    expect(Math.abs(right!.y - left!.y)).toBeLessThan(20);
+
+    // The stain is a coloured box shown through one of the watercolor shapes.
+    const stain = first.locator('.watercolor3');
+    const stainStyle = await stain.evaluate((el) => {
+      const s = getComputedStyle(el);
+      return { mask: s.maskImage || s.webkitMaskImage, color: s.backgroundColor, position: s.position };
+    });
+    expect(stainStyle.mask).toMatch(/^url\(.*watercolor3.*\.png/);
+    expect(stainStyle.color).toBe('rgb(187, 173, 130)');
+    expect(stainStyle.position).toBe('absolute');
+
+    // The page look is the frames' in the books (teal headings), not the app's.
+    expect(await first.locator('h1').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(51, 112, 128)');
+    await expect(win.locator('.frame-view__jump-link:visible')).toHaveText(['Overview', 'Campaign Mechanics']);
+
+    // The frame's own CSS reaches its pages and nothing outside them.
+    await win.getByRole('button', { name: 'Edit Frame' }).click();
+    await form().getByRole('tab', { name: 'Style' }).click();
+    await form().getByLabel('Frame CSS').fill('@import url("https://example.com/x.css"); h1 { color: rgb(200, 0, 0); }');
+    await form().getByRole('button', { name: 'Save Changes' }).click();
+    await expect(pages()).toHaveCount(2);
+    expect(await pages().first().locator('h1').evaluate((el) => getComputedStyle(el).color)).toBe('rgb(200, 0, 0)');
+    expect(await win.locator('.frame-view__bar-title h1').evaluate((el) => getComputedStyle(el).color)).not.toBe('rgb(200, 0, 0)');
+  });
+
+  test('the snippet bar writes page breaks, columns and stains, and warns when a page is too full', async () => {
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill('Snippets');
+    await form().getByRole('button', { name: 'Advanced' }).click();
+
+    await form().getByRole('button', { name: 'Title page' }).click();
+    await form().getByRole('button', { name: 'Page break' }).click();
+    await form().getByRole('button', { name: 'Stain' }).click();
+    await form().getByRole('button', { name: 'Column break' }).click();
+    await form().getByRole('button', { name: 'Table', exact: true }).click();
+    const text = await markdownBox().inputValue();
+    expect(text).toContain('{{titlePage}}');
+    expect(text).toContain('# Snippets');
+    expect(text).toMatch(/\n\\page\n\n\{\{watercolor\d+,top:20px/);
+    expect(text).toContain('\n\\column\n\n##### Table Title');
+
+    // The pages beside the text keep up with it.
+    const preview = win.locator('.brew-editor__preview .page');
+    await expect(preview).toHaveCount(2);
+    await expect(preview.first().locator('.titlePage')).toHaveCount(1);
+    await expect(win.locator('.brew-editor__overflow')).toHaveCount(0);
+
+    // Far more than a page holds: said so, and Fit to pages breaks it up.
+    const paragraph = 'Hope was a literal concentration of organic force in the world of Eldrefell. '.repeat(6);
+    await markdownBox().fill(Array.from({ length: 40 }, (_, i) => `## Entry ${i + 1}\n\n${paragraph}`).join('\n\n'));
+    await expect(win.locator('.brew-editor__overflow')).toContainText('Page 1 has more than fits');
+    await form().getByRole('button', { name: 'Fit to pages' }).click();
+    await expect(win.locator('.brew-editor__overflow')).toHaveCount(0);
+    expect(await preview.count()).toBeGreaterThan(1);
+    expect(await markdownBox().inputValue()).toContain('\n\\page\n');
+  });
+
+  test('a picture added to the app is shown inside a watercolor edge', async () => {
+    // A real 2x2 PNG, brought in the way a dropped file is.
+    const source = path.join(tempDir, 'swamp.png');
+    fs.writeFileSync(
+      source,
+      Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGNkYPjPwMDAxAAGDAwMAA0OAQMfOdP3AAAAAElFTkSuQmCC', 'base64')
+    );
+    const url = await win.evaluate(async (file) => {
+      const bridge = (window as unknown as { daggerheart: { importFrameImagePaths: (p: string[]) => Promise<{ images: { url: string }[] }> } })
+        .daggerheart;
+      const { images } = await bridge.importFrameImagePaths([file, 'C:/not-a-picture.txt']);
+      return images.map((image) => image.url);
+    }, source);
+    expect(url).toHaveLength(1);
+    expect(url[0]).toMatch(/^dhmedia:\/\/frame-image\/[0-9a-f-]+\.png$/);
+    expect(fs.readdirSync(path.join(tempDir, 'frame-images'))).toHaveLength(1);
+
+    await createAdvancedFrame(
+      'Edges',
+      `# Overview\n\nText over a picture.\n\n{{imageMaskEdge2,--offset:10%,--rotation:0\n  ![swamp](${url[0]}) {width:100%,bottom:0%}\n}}\n`
+    );
+    const mask = pages().first().locator('.imageMaskEdge2');
+    const img = mask.locator('img');
+    await expect(img).toHaveAttribute('alt', 'swamp');
+    await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.naturalWidth)).toBe(2);
+    const maskImage = await mask.evaluate((el) => getComputedStyle(el).maskImage || getComputedStyle(el).webkitMaskImage);
+    expect(maskImage).toMatch(/^url\(.*\.webp/);
+  });
+
+  test('a structured frame converts to Advanced pages and can go back', async () => {
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill('Witherwild');
+    await form().getByLabel('Concept').fill('A virulent overgrowth spreads.');
+    await form().getByLabel('The pitch, as you would read it to your players').fill('Fanewick was once a place of peace.');
+    await openFormSection('Overview');
+    await form().getByLabel('Overview').fill('Fanewick is a **wild** land.');
+    await openFormSection('GM Principles');
+    await form().getByRole('button', { name: '+ Add GM principle' }).click();
+    await form().getByLabel('GM principle heading').fill('Paint the World in Contrast');
+    await form().getByLabel('GM principle text').fill('Subvert expectations.');
+    await form().getByRole('button', { name: 'Create Campaign Frame' }).click();
+    await expect(section('gmPrinciples').locator('.frame-entry__heading')).toHaveText('Paint the World in Contrast');
+
+    await win.getByRole('button', { name: 'Edit Frame' }).click();
+    await form().getByRole('button', { name: 'Advanced' }).click();
+    await form().getByRole('button', { name: 'Start from this frame’s sections' }).click();
+    await expect(markdownBox()).toHaveValue(/\{\{titlePage\}\}[\s\S]*# Witherwild[\s\S]*\\page[\s\S]*# Overview[\s\S]*# GM Principles\n\n\*Keep the following[\s\S]*## Paint the World in Contrast\n\nSubvert expectations\./);
+    await form().getByRole('button', { name: 'Save Changes' }).click();
+
+    await expect(pages()).toHaveCount(2);
+    await expect(pages().first().locator('h1')).toHaveText('Witherwild');
+    await expect(pages().nth(1).locator('h2')).toHaveText('Paint the World in Contrast');
+    await expect(pages().nth(1).locator('strong')).toHaveText('wild');
+
+    // Back to Structured: the sections were kept all along, and so is the Markdown.
+    await win.getByRole('button', { name: 'Edit Frame' }).click();
+    await form().getByRole('button', { name: 'Structured' }).click();
+    await form().getByRole('button', { name: 'Save Changes' }).click();
+    await expect(section('gmPrinciples').locator('.frame-entry__heading')).toHaveText('Paint the World in Contrast');
+    await win.getByRole('button', { name: 'Edit Frame' }).click();
+    await form().getByRole('button', { name: 'Advanced' }).click();
+    await expect(markdownBox()).toHaveValue(/# GM Principles/);
+  });
+
+  test('a structured frame can be read in two columns, and that is remembered', async () => {
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill('Columns');
+    await openFormSection('Overview');
+    await form().getByLabel('Overview').fill(Array.from({ length: 8 }, (_, i) => `Paragraph ${i + 1} of the overview.`).join('\n'));
+    await form().getByRole('button', { name: 'Create Campaign Frame' }).click();
+
+    const body = section('overview').locator('.frame-section__body');
+    expect(await body.evaluate((el) => getComputedStyle(el).columnCount)).toBe('auto');
+    await win.getByRole('button', { name: 'Two columns' }).click();
+    expect(await body.evaluate((el) => getComputedStyle(el).columnCount)).toBe('2');
+    const first = await body.locator('p').first().boundingBox();
+    const last = await body.locator('p').last().boundingBox();
+    expect(last!.x).toBeGreaterThan(first!.x + 100);
+
+    await win.reload();
+    await win.click('.app-shell__nav-link:has-text("Campaign Frames")');
+    await win.locator('.frame-card:visible', { hasText: 'Columns' }).click();
+    await expect(win.getByRole('button', { name: 'Two columns' })).toHaveAttribute('aria-pressed', 'true');
+    await win.getByRole('button', { name: 'One column' }).click();
+    expect(await body.evaluate((el) => getComputedStyle(el).columnCount)).toBe('auto');
+  });
+
+  test('Export PDF saves the pages as a letter-size PDF and leaves the app as it was', async () => {
+    await createAdvancedFrame('Printed', '# Overview\n\nPage one.\n\n\\page\n\n# Mechanics\n\nPage two.\n\n\\page\n\n# Credit\n\nPage three.');
+    const pdfPath = path.join(tempDir, 'frame.pdf');
+    await win.getByRole('button', { name: 'Export PDF' }).click();
+    await expect.poll(() => fs.existsSync(pdfPath), { timeout: 20000 }).toBe(true);
+    await expect(win.getByRole('button', { name: 'Export PDF' })).toBeEnabled();
+
+    const pdf = fs.readFileSync(pdfPath);
+    expect(pdf.subarray(0, 5).toString()).toBe('%PDF-');
+    const text = pdf.toString('latin1');
+    // Three sheets, each letter-size (612 x 792 points).
+    expect((text.match(/\/Type\s*\/Page\b/g) ?? []).length).toBe(3);
+    expect(text).toMatch(/\/MediaBox\s*\[\s*0\s+0\s+612\s+792\s*\]/);
+
+    // The window is the app again, not the print layout.
+    expect(await win.evaluate(() => document.documentElement.classList.contains('brew-printing'))).toBe(false);
+    await expect(win.locator('.app-shell__nav-link.active')).toHaveText('Campaign Frames');
+    await expect(pages()).toHaveCount(3);
   });
 });

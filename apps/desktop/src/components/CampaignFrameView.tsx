@@ -9,9 +9,21 @@ import {
   PITCH_INTRO,
   SESSION_ZERO_INTRO,
 } from '../lib/frameSections';
+import BrewReader from './BrewReader';
 import CampaignFrameForm from './CampaignFrameForm';
 import FrameText from './FrameText';
+import './BrewEditor.css';
 import './CampaignFrameView.css';
+
+const COLUMNS_KEY = 'daggerheart-frame-columns';
+
+function loadColumns(): 1 | 2 {
+  try {
+    return localStorage.getItem(COLUMNS_KEY) === '2' ? 2 : 1;
+  } catch {
+    return 1; // localStorage can be unavailable; one column is fine.
+  }
+}
 
 /** The rulebook's row of dots: how much a frame asks of the GM running it. */
 export function ComplexityPips({ value }: { value: number }) {
@@ -26,7 +38,7 @@ export function ComplexityPips({ value }: { value: number }) {
 
 function FrameTableView({ table }: { table: FrameTable }) {
   return (
-    <figure className="frame-table">
+    <figure className={`frame-table${table.columns.length >= 4 ? ' frame-table--wide' : ''}`}>
       {table.caption && (
         <figcaption className="frame-table__caption">
           <FrameText text={table.caption} inline />
@@ -111,7 +123,17 @@ interface CampaignFrameViewProps {
 // holes in it.
 export default function CampaignFrameView({ frame, setName, onBack, onSaved, onDeleted }: CampaignFrameViewProps) {
   const [editing, setEditing] = useState(false);
+  const [columns, setColumns] = useState<1 | 2>(loadColumns);
   const sectionRefs = useRef<Record<string, HTMLElement | null>>({});
+
+  function changeColumns(next: 1 | 2) {
+    setColumns(next);
+    try {
+      localStorage.setItem(COLUMNS_KEY, String(next));
+    } catch {
+      // Not remembered, then.
+    }
+  }
 
   async function handleDelete() {
     if (!(await confirmDialog(`Delete "${frame.name}"? This can't be undone.`))) return;
@@ -139,6 +161,10 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
         />
       </div>
     );
+  }
+
+  if (frame.format === 'advanced') {
+    return <BrewReader frame={frame} onBack={onBack} onEdit={() => setEditing(true)} onDelete={handleDelete} />;
   }
 
   const lists = [
@@ -217,7 +243,7 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
   }
 
   return (
-    <div className="frame-view">
+    <div className={`frame-view${columns === 2 ? ' frame-view--two' : ''}`}>
       <button type="button" className="frame-view__back" onClick={onBack}>
         &larr; All Campaign Frames
       </button>
@@ -253,6 +279,24 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
       ) : (
         <div className="frame-view__layout">
           <nav className="frame-view__jump" aria-label="Sections">
+            <div className="frame-toggle frame-view__columns" role="group" aria-label="Columns">
+              <button
+                type="button"
+                className={`frame-toggle__option${columns === 1 ? ' frame-toggle__option--active' : ''}`}
+                aria-pressed={columns === 1}
+                onClick={() => changeColumns(1)}
+              >
+                One column
+              </button>
+              <button
+                type="button"
+                className={`frame-toggle__option${columns === 2 ? ' frame-toggle__option--active' : ''}`}
+                aria-pressed={columns === 2}
+                onClick={() => changeColumns(2)}
+              >
+                Two columns
+              </button>
+            </div>
             {sections.map((section) => (
               <button
                 key={section.id}
@@ -280,7 +324,9 @@ export default function CampaignFrameView({ frame, setName, onBack, onSaved, onD
                     <FrameText text={section.intro} inline />
                   </p>
                 )}
-                {section.content}
+                <div className={`frame-section__body${section.id === 'pitch' ? ' frame-section__body--pitch' : ''}`}>
+                  {section.content}
+                </div>
               </section>
             ))}
           </article>

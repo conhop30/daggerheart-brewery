@@ -138,6 +138,104 @@
   color: var(--muted);
 }
 
+/* ---- An Advanced-format frame: a plain bar above its pages (the pages
+   carry their own title page, so there is no hero). ---- */
+.frame-view__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--hairline);
+}
+
+.frame-view__bar-title h1 {
+  font-size: 1.8rem;
+  margin-bottom: 2px;
+}
+
+.frame-view__bar-title p {
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--ink-dim);
+  max-width: 720px;
+}
+
+.frame-view__bar-actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.frame-view__bar-action {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 4px 11px;
+  white-space: nowrap;
+  transition:
+    border-color 200ms var(--ease),
+    color 200ms var(--ease);
+}
+
+.frame-view__bar-action:hover:not(:disabled) {
+  border-color: var(--hope);
+  color: var(--ink);
+}
+
+.frame-view__bar-action--danger:hover:not(:disabled) {
+  border-color: var(--fear-on-dark);
+  color: var(--fear-on-dark);
+}
+
+.frame-view__pages {
+  min-width: 0;
+  max-width: 880px;
+}
+
+.frame-view__columns {
+  flex-direction: column;
+  align-items: stretch;
+  margin: 0 0 var(--space-2) var(--space-2);
+}
+
+.frame-view__columns .frame-toggle__option {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.7rem;
+}
+
+/* ---- A structured frame read in two columns ---- */
+.frame-view--two .frame-view__article {
+  max-width: none;
+}
+
+.frame-view--two .frame-section__body:not(.frame-section__body--pitch) {
+  columns: 2;
+  column-gap: var(--space-4);
+}
+
+.frame-view--two .frame-entry__heading,
+.frame-view--two .frame-text__heading {
+  break-after: avoid;
+}
+
+.frame-view--two .frame-table,
+.frame-view--two .frame-text li,
+.frame-view--two .frame-entry__questions li {
+  break-inside: avoid;
+}
+
+.frame-view--two .frame-table--wide {
+  column-span: all;
+  margin-bottom: var(--space-3);
+}
+
 .frame-view__layout {
   display: grid;
   grid-template-columns: 190px minmax(0, 1fr);

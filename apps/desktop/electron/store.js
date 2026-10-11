@@ -1144,7 +1144,11 @@ function removeCampaign(id) {
 // Highborne" with its prompts and a custom mechanic with its roll tables are
 // one kind of thing with different parts filled in.
 
-const FRAME_TEXT_FIELDS = ['concept', 'designers', 'pitch', 'overview', 'incitingIncident', 'credits'];
+// `markdown` and `styleCss` are the Advanced format: the whole frame written
+// as one Homebrewery-style Markdown document, with its own CSS. A frame keeps
+// its structured sections when it goes Advanced, so it can come back.
+const FRAME_FORMATS = ['structured', 'advanced'];
+const FRAME_TEXT_FIELDS = ['concept', 'designers', 'pitch', 'overview', 'incitingIncident', 'credits', 'markdown', 'styleCss'];
 const FRAME_LIST_FIELDS = ['toneAndFeel', 'themes', 'touchstones', 'sessionZeroQuestions'];
 const FRAME_ENTRY_SECTIONS = [
   'communities',
@@ -1183,6 +1187,7 @@ function sanitizeFrameEntry(entry) {
 
 function validateCampaignFrame(store, data) {
   validateGameSetRef(store, data);
+  requireEnum(data, 'format', FRAME_FORMATS);
   clampNumber(data, 'complexity', { min: 1, max: 5, allowNull: false });
   validateImageDataUrl(data, 'coverImage');
   for (const field of FRAME_TEXT_FIELDS) if (data[field] !== undefined) data[field] = frameText(data[field]);
@@ -1194,7 +1199,12 @@ function validateCampaignFrame(store, data) {
 
 /** Fills in whatever a record lacks, for build (a sparse create) and present (a record older than a field) alike. */
 function withFrameDefaults(record) {
-  const result = { ...record, complexity: record.complexity ?? 1, coverImage: record.coverImage ?? null };
+  const result = {
+    ...record,
+    complexity: record.complexity ?? 1,
+    coverImage: record.coverImage ?? null,
+    format: record.format ?? 'structured',
+  };
   for (const field of FRAME_TEXT_FIELDS) result[field] = record[field] ?? '';
   for (const field of [...FRAME_LIST_FIELDS, ...FRAME_ENTRY_SECTIONS]) result[field] = record[field] ?? [];
   return result;

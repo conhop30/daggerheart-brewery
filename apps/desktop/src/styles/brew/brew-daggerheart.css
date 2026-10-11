@@ -1,0 +1,276 @@
+/* The look of an Advanced-format page, modelled on the Campaign Frame pages
+   of the Daggerheart rulebooks: a pale green band across the top carrying
+   the frame's name, teal section and entry headings, small gold sub-heads,
+   small tight body text, teal-headed tables. Measured from the books; the
+   books' own typefaces are commercial, so the app's Fraunces and Inter stand
+   in for them. The frame's name and cover arrive as --frame-name and
+   --frame-cover on the host (see BrewPages). */
+
+.page {
+  padding: 2.25cm 1.6cm 1.6cm;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 9pt;
+  line-height: 1.4;
+  color: #231f20;
+}
+
+/* The running header. */
+.page::before {
+  content: var(--frame-name, '');
+  position: absolute;
+  top: 0.8cm;
+  left: 1.2cm;
+  right: 1.2cm;
+  height: 0.85cm;
+  display: flex;
+  align-items: center;
+  padding: 0 0.4cm;
+  background: #dce9d6;
+  font-family: 'Fraunces', serif;
+  font-weight: 500;
+  font-size: 13pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #2b3a28;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.page:nth-child(even)::before {
+  justify-content: flex-end;
+}
+
+.page::after {
+  content: counter(page-numbers);
+  position: absolute;
+  bottom: 0.7cm;
+  right: 1.2cm;
+  font-family: 'Fraunces', serif;
+  font-weight: 600;
+  font-size: 7.5pt;
+  color: #231f20;
+}
+
+.page:nth-child(even)::after {
+  right: auto;
+  left: 1.2cm;
+}
+
+.page p {
+  margin: 0 0 0.7em;
+}
+
+.page strong {
+  font-weight: 700;
+}
+
+.page em {
+  font-style: italic;
+}
+
+.page h1,
+.page h2,
+.page h3,
+.page h4,
+.page h5,
+.page h6 {
+  margin: 0;
+  line-height: 1.2;
+  break-after: avoid;
+}
+
+/* A section: OVERVIEW, COMMUNITIES... */
+.page h1 {
+  margin: 0.2em 0 0.25em;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: 13.5pt;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #337080;
+}
+
+.page * + h1 {
+  margin-top: 1.1em;
+}
+
+/* An entry within a section: a Community, a principle, a mechanic. */
+.page h2 {
+  margin: 1em 0 0.2em;
+  font-weight: 700;
+  font-size: 11pt;
+  color: #337080;
+}
+
+/* A sub-head within an entry. */
+.page h3 {
+  margin: 1em 0 0.25em;
+  font-weight: 700;
+  font-size: 8.5pt;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: #967b30;
+}
+
+.page h4 {
+  margin: 0.9em 0 0.2em;
+  font-weight: 700;
+  font-size: 9pt;
+}
+
+/* A table's title, sitting on the table as its top band. */
+.page h5 {
+  margin: 0.9em 0 0;
+  padding: 0.35em 0.6em;
+  background: #337080;
+  font-weight: 700;
+  font-size: 8pt;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  text-align: center;
+  color: #ffffff;
+}
+
+.page h5 + p {
+  margin: 0.4em 0;
+}
+
+.page ul,
+.page ol {
+  margin: 0 0 0.7em;
+  padding-left: 1.3em;
+  list-style-position: outside;
+}
+
+.page ul {
+  list-style-type: disc;
+}
+
+.page li {
+  margin-bottom: 0.3em;
+}
+
+.page li::marker {
+  color: #337080;
+}
+
+.page table {
+  margin: 0 0 1em;
+  border-collapse: collapse;
+  font-size: 8pt;
+  line-height: 1.35;
+}
+
+.page th {
+  padding: 0.35em 0.6em;
+  background: #578594;
+  font-weight: 700;
+  font-size: 7.5pt;
+  letter-spacing: 0.04em;
+  text-align: left;
+  color: #ffffff;
+}
+
+/* A plain numbered list has no column names; its empty header row is not drawn. */
+.page thead:not(:has(th:not(:empty))) {
+  display: none;
+}
+
+.page td {
+  padding: 0.35em 0.6em;
+  vertical-align: top;
+}
+
+.page tbody tr:nth-child(even) td {
+  background: #e6edf0;
+}
+
+.page blockquote {
+  margin: 0 0 1em;
+  padding: 0.6em 0.8em;
+  background: #dce9d6;
+  border-left: 3px solid #337080;
+}
+
+.page blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+.page hr {
+  margin: 0.9em 0;
+  border: none;
+  border-top: 1px solid #337080;
+}
+
+.page dl {
+  margin: 0 0 0.7em;
+}
+
+.page dt {
+  float: left;
+  margin-right: 0.4em;
+  font-weight: 700;
+}
+
+.page a {
+  color: #337080;
+}
+
+.page code {
+  font-family: 'IBM Plex Mono', ui-monospace, monospace;
+  font-size: 0.92em;
+}
+
+/* ---- The title page: {{titlePage}} ----
+   Art across the top fading into a deep green, with the title, pitch and
+   lists in white beneath it, as the frames in the books open. */
+.page:has(.titlePage) {
+  padding-top: 12.4cm;
+  background-color: #1f4912;
+  color: #ffffff;
+}
+
+.page:has(.titlePage)::before,
+.page:has(.titlePage)::after {
+  content: none;
+}
+
+.page .titlePage {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: -3;
+  width: 100%;
+  height: 12.6cm;
+  background-image: linear-gradient(to bottom, rgba(31, 73, 18, 0) 55%, #1f4912 100%),
+    var(--frame-cover, linear-gradient(160deg, #3c6e2f, #10250b));
+  background-size: cover;
+  background-position: center;
+}
+
+.page:has(.titlePage) h1 {
+  margin: 0 0 0.2em;
+  font-size: 22pt;
+  color: #ffffff;
+}
+
+.page:has(.titlePage) h1 + p {
+  font-size: 10.5pt;
+}
+
+.page:has(.titlePage) h2 {
+  font-family: 'Fraunces', serif;
+  font-size: 12pt;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.page:has(.titlePage) .columnWrapper > h2:first-of-type,
+.page:has(.titlePage) .columnSplit + h2 {
+  margin-top: 0;
+}
+
+.page:has(.titlePage) li::marker {
+  color: #ffffff;
+}

@@ -1,0 +1,223 @@
+/* The mechanics of an Advanced-format page: its size, its two columns, and
+   the watercolor stains and masked images. Adapted from the "Blank" theme of
+   Homebrewery (naturalcrit/homebrewery, MIT, (c) 2016 Scott Tolksdorf); see
+   THIRD_PARTY_NOTICES.md. The look (type, colours, the running header) is
+   brew-daggerheart.css's business, not this file's.
+
+   Everything here lives inside BrewPages' shadow root, so none of it reaches
+   the app and none of the app's styles reach it. The --wc rules that point
+   each stain and mask class at its image are generated in lib/brewStyles. */
+
+:host {
+  display: block;
+}
+
+.pages {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 24px;
+  counter-reset: page-numbers;
+}
+
+/* Nothing flows from one page to the next: what doesn't fit is clipped, and
+   the author starts the next page with \page. */
+.page {
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  width: 215.9mm;
+  height: 279.4mm;
+  padding: 1.4cm 1.9cm 1.7cm;
+  overflow: clip;
+  column-count: 2;
+  column-fill: auto;
+  column-gap: 0.9cm;
+  counter-increment: page-numbers;
+  background-color: #ffffff;
+  text-rendering: optimizeLegibility;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.columnWrapper {
+  columns: inherit;
+  column-span: all;
+  column-fill: inherit;
+  column-gap: inherit;
+  max-height: 100%;
+}
+
+.page .block {
+  display: inline-block;
+  width: 100%;
+  break-inside: avoid;
+}
+
+.page .inline-block {
+  display: inline-block;
+  text-indent: initial;
+}
+
+.page p {
+  display: block;
+  overflow-wrap: break-word;
+}
+
+.page img {
+  max-width: 100%;
+}
+
+.page table {
+  width: 100%;
+}
+
+.page blockquote,
+.page table,
+.page li {
+  break-inside: avoid;
+}
+
+/* \column */
+.page .columnSplit {
+  visibility: hidden;
+  margin-top: 0;
+  break-after: column;
+}
+
+.page .columnSplit + * {
+  margin-top: 0;
+}
+
+/* {{wide ...}} runs across both columns. */
+.page .wide {
+  display: block;
+  column-span: all;
+  margin-bottom: 1em;
+}
+
+.page .wide + * {
+  margin-top: 0;
+}
+
+/* ---- Watercolor stains: {{watercolor3,top:20px,left:30px,width:300px,background-color:#BBAD82,opacity:80%}} ----
+   An empty box whose colour only shows through the stain's shape. */
+.page [class*='watercolor'] {
+  position: absolute;
+  z-index: -2;
+  width: 2000px;
+  height: 2000px;
+  background-color: #000000;
+  background-size: cover;
+  -webkit-mask-image: var(--wc);
+  mask-image: var(--wc);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+/* ---- Masked images: {{imageMaskEdge2,--offset:10%,--rotation:0 ![](url) {width:100%,bottom:0%} }} ----
+   A box twice the page's size, centred on the page, holding the picture and
+   showing it only through a torn watercolor shape. Edge masks repeat along
+   one side of the page; --rotation turns that side. */
+.page [class*='imageMask'] {
+  --rotation: 0;
+  --scaleX: 1;
+  --scaleY: 1;
+  --offset: 0%;
+  --offsetX: 0%;
+  --offsetY: 0%;
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 200%;
+  height: 200%;
+  -webkit-mask-image: var(--wc);
+  mask-image: var(--wc);
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-position: 50% calc(50% - var(--offset));
+  mask-position: 50% calc(50% - var(--offset));
+  -webkit-mask-size: 50%;
+  mask-size: 50%;
+  transform: translateY(50%) translateX(-50%) rotate(calc(1deg * var(--rotation))) scaleX(var(--scaleX)) scaleY(var(--scaleY));
+}
+
+/* The picture's paragraph is the page-sized area in the middle of that box,
+   turned back upright so the picture isn't rotated with the mask. */
+.page [class*='imageMask'] > p:has(img) {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  width: 50%;
+  height: 50%;
+  margin: 0;
+  transform: translateX(-50%) translateY(50%) scaleX(calc(1 / var(--scaleX))) scaleY(calc(1 / var(--scaleY)))
+    rotate(calc(-1deg * var(--rotation)));
+}
+
+.page [class*='imageMask'] img {
+  position: absolute;
+  bottom: 0;
+  display: block;
+  max-width: none;
+}
+
+.page [class*='imageMaskCenter'] {
+  bottom: calc(var(--offsetY));
+  left: calc(var(--offsetX));
+  width: 100%;
+  height: 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 50% 50%;
+  mask-position: 50% 50%;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: rotate(calc(1deg * var(--rotation))) scaleX(var(--scaleX)) scaleY(var(--scaleY));
+}
+
+.page [class*='imageMaskCenter'] > p:has(img) {
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(calc(1 / var(--scaleX))) scaleY(calc(1 / var(--scaleY))) rotate(calc(-1deg * var(--rotation)))
+    translateX(calc(-1 * var(--offsetX))) translateY(calc(1 * var(--offsetY)));
+}
+
+.page [class*='imageMaskCorner'] {
+  bottom: calc(-50% + var(--offsetY));
+  left: calc(-50% + var(--offsetX));
+  width: 200%;
+  height: 200%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 50% 50%;
+  mask-position: 50% 50%;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: rotate(calc(1deg * var(--rotation))) scaleX(var(--scaleX)) scaleY(var(--scaleY));
+}
+
+.page [class*='imageMaskCorner'] > p:has(img) {
+  bottom: 25%;
+  left: 25%;
+  width: 50%;
+  height: 50%;
+  transform: scaleX(calc(1 / var(--scaleX))) scaleY(calc(1 / var(--scaleY))) rotate(calc(-1deg * var(--rotation)))
+    translateX(calc(-1 * var(--offsetX))) translateY(calc(1 * var(--offsetY)));
+}
+
+/* ---- Printing (Export PDF): one page per sheet, nothing between them. ---- */
+:host([data-print]) .pages {
+  gap: 0;
+  zoom: 1 !important;
+}
+
+:host([data-print]) .page {
+  box-shadow: none;
+  break-after: page;
+}

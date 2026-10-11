@@ -1,3 +1,11 @@
+/* An Advanced frame is pages beside an editor or a jump list, and a
+   structured one read in two columns wants the room too. */
+.browse-page.frames-page:has(.frame-form--advanced),
+.browse-page.frames-page:has(.frame-view--pages),
+.browse-page.frames-page:has(.frame-view--two) {
+  max-width: 1500px;
+}
+
 .frames-page__header-actions {
   display: flex;
   align-items: center;

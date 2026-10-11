@@ -388,6 +388,24 @@ describe('CampaignFrame', () => {
     });
   });
 
+  it('is structured until told otherwise, and keeps its sections when it goes Advanced', async () => {
+    const frame = await store.createCampaignFrame({
+      name: 'Lost Legend',
+      gameSetId: setId,
+      gmPrinciples: [{ heading: 'The Night Is Darkest', body: 'Before the dawn.' }],
+    });
+    expect(frame).toMatchObject({ format: 'structured', markdown: '', styleCss: '' });
+    const advanced = await store.updateCampaignFrame(frame.id, {
+      format: 'advanced',
+      markdown: '# Overview\n\\page\nMore.',
+      styleCss: '.page h1 { color: teal; }',
+    });
+    expect(advanced.format).toBe('advanced');
+    expect(advanced.markdown).toBe('# Overview\n\\page\nMore.');
+    expect(advanced.gmPrinciples).toHaveLength(1);
+    await expect(store.updateCampaignFrame(frame.id, { format: 'fancy' })).rejects.toThrow('format must be one of');
+  });
+
   it('clamps complexity into 1-5', async () => {
     const frame = await store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId, complexity: 9 });
     expect(frame.complexity).toBe(5);
@@ -457,6 +475,8 @@ describe('CampaignFrame', () => {
     await store.importSnapshot({ campaignFrames: [{ id: 'old-frame', name: 'Old Frame', gameSetId: setId }] });
     const [frame] = store.listCampaignFrames();
     expect(frame.distinctions).toEqual([]);
+    expect(frame.format).toBe('structured');
+    expect(frame.markdown).toBe('');
     expect(frame.pitch).toBe('');
     expect(frame.complexity).toBe(1);
   });

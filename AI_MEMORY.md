@@ -215,6 +215,29 @@ never into the repo, the seed or a release, same rule as book art. Not
 built: frame maps, cover art from the books, rollable frame tables, and
 frame mechanics inside a Session.
 
+Campaign Frames, Advanced format (2026-10-10, unreleased; 339 Vitest, 117
+Playwright green): a frame has `format` (`structured` | `advanced`),
+`markdown` and `styleCss`; both formats' data is always kept. `lib/brew.ts`
+splits on `\page`, renders with `marked-hbfm` (pages MUST be rendered in
+order from index 0: the package keeps per-page variable state) and
+sanitises with DOMPurify. `BrewPages` draws into a Shadow DOM root with
+`lib/brewStyles.ts`'s CSS (`brew-base.css` mechanics adapted from
+Homebrewery's Blank theme, generated `--wc` rules for the 74 mask images in
+`src/assets/brew`, `brew-daggerheart.css` look), all inside `@layer brew`
+so a frame's own unlayered CSS wins. `lib/brewPaginate.ts` measures a
+hidden page to insert `\page` (Fit to pages, and the converter);
+`lib/frameToMarkdown.ts` writes a structured frame as Markdown;
+`lib/brewPrint.tsx` + `frames:exportPdf` print via `printToPDF`
+(`DAGGERHEART_PDF_PATH` replaces the Save dialog under test). Pictures:
+`frames:importImage`/`importImagePaths` copy into
+`<store dir>/frame-images`, shown as `dhmedia://frame-image/<name>`; not
+in Export Data, and never deleted automatically. Gotchas met: `main.js`
+already had an `IMAGE_TYPES` (backdrops), a second `const` of that name
+stops the app opening at all; the toggles here use `.frame-toggle*`, not
+`.mode-toggle*`, because Equipment's tests count those; DOMPurify lets any
+`data:` URI through on `<img>` unless hooked. Homebrewery's 5e theme is
+deliberately not copied.
+
 After v1.8.1 (2026-10-10): no `window.alert` or `window.confirm` is left
 in `src` — errors go through `alertDialog` and questions through
 `confirmDialog` (both `lib/confirm`, both drawn by `ConfirmHost`; a notice

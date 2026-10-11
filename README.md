@@ -207,6 +207,40 @@ only the sections that have been written.
 - **A Campaign can name the frame it is played in.** Its page shows the
   frame's name and concept with a button that opens it. Deleting a frame
   never deletes a Campaign; it only clears the link.
+- **Two columns** on the reading page at a click, remembered.
+
+**The Advanced format** is the other way to write a frame: the whole thing
+as one Markdown document, drawn as letter-size two-column pages, in the
+manner of [The Homebrewery](https://homebrewery.naturalcrit.com) (MIT),
+whose Markdown flavour (`marked-hbfm`), stain and mask images, and page
+mechanics it uses; see `public/THIRD_PARTY_NOTICES.txt`.
+
+- `\page` and `\column` break pages and columns; `{{class,prop:value}}`
+  blocks carry classes and styles. Nothing flows between pages on its own,
+  so the editor says which pages are over-full and **Fit to pages** lays the
+  document out off screen and inserts the breaks.
+- **Watercolor stains and watercolor-edged pictures**: a stain is a coloured
+  box shown through a mask image; an edge, center or corner picture is an
+  oversized box holding the image, masked and placed with CSS custom
+  properties. A snippet bar writes each one.
+- **Pictures** are copied into `<data dir>/frame-images` and served over the
+  app's `dhmedia:` scheme, not stored in `data.json`. Like music, they are
+  not part of Export Data.
+- **Everything is drawn inside a Shadow DOM root**, so page CSS and the
+  app's CSS can't touch each other, and a frame's own CSS (its Style tab)
+  applies to its pages only. The built-in styles sit in a cascade layer, so
+  a plain `h1 { ... }` in a frame's CSS wins.
+- **The page HTML comes from the author's text, so it is sanitised**
+  (DOMPurify: no scripts, handlers, frames or style tags; pictures only
+  from https, embedded data or the app itself) before the app's one use of
+  `dangerouslySetInnerHTML` draws it. Unit tests pin what gets through.
+- **The look follows the rulebooks' own frame pages** (running header,
+  teal headings, gold sub-heads), measured from them; their commercial
+  typefaces are not bundled.
+- **Export PDF** prints the pages at full size through Electron's
+  `printToPDF`, one sheet per page.
+- **A structured frame converts** (`lib/frameToMarkdown`) and keeps its
+  sections, so it can switch back.
 
 ### Session Builder (complete, and growing)
 
@@ -619,6 +653,9 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       alike) uses the app's own dialog instead of a system pop-up
 - [x] Campaign Frames: a gallery, a book-order reading page, a structured
       editor with tables, and an optional link from a Campaign
+- [x] Campaign Frames, Advanced format: Homebrewery-style Markdown pages
+      with pictures, watercolor stains and edges, per-frame CSS, PDF
+      export; two-column reading for structured frames
 - [ ] A table view for Heritage and Optional Mechanics (a shared card
       grid today)
 - [ ] Campaign Frame maps, and using a frame's mechanics inside a live

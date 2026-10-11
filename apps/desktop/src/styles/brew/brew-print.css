@@ -1,0 +1,20 @@
+/* Export PDF (lib/brewPrint): while a frame is being printed, the window is
+   only that frame's pages. The app itself never prints anything else, so the
+   page size can be set for the whole document. */
+@page {
+  size: 215.9mm 279.4mm;
+  margin: 0;
+}
+
+html.brew-printing body > *:not(#brew-print) {
+  display: none !important;
+}
+
+html.brew-printing,
+html.brew-printing body {
+  margin: 0;
+  padding: 0;
+  height: auto;
+  overflow: visible;
+  background: #ffffff;
+}

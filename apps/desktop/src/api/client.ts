@@ -25,6 +25,12 @@ export interface SessionContext {
   sessionId?: string | null;
 }
 
+/** A picture copied into the app's frame-images folder: `url` is what an <img> or Markdown image points at. */
+export interface FrameImage {
+  url: string;
+  name: string;
+}
+
 export interface DaggerheartBridge {
   list: (collection: string) => Promise<unknown[]>;
   listSubclassesByParentClass: (parentClassId: string) => Promise<unknown[]>;
@@ -44,6 +50,9 @@ export interface DaggerheartBridge {
   importDroppedMusicPaths: (regionId: string, filePaths: string[]) => Promise<{ tracks: unknown[] }>;
   copyMusicTrackToRegion: (trackId: string, targetRegionId: string) => Promise<unknown>;
   listSubclassBackdrops: () => Promise<string[]>;
+  importFrameImage: () => Promise<{ canceled: boolean; images: FrameImage[] }>;
+  importFrameImagePaths: (filePaths: string[]) => Promise<{ images: FrameImage[] }>;
+  exportFramePdf: (suggestedName: string) => Promise<{ canceled: boolean; filePath?: string }>;
   create: (collection: string, data: unknown) => Promise<unknown>;
   update: (collection: string, id: string, patch: unknown, ctx?: SessionContext) => Promise<unknown>;
   remove: (collection: string, id: string, ctx?: SessionContext) => Promise<void>;
@@ -128,6 +137,12 @@ export const apiClient = {
     (await unwrap(bridge().listNoteTabsBySession(sessionId))) as T[],
   /** File names in this install's own subclass-backdrops folder - see electron/main.js. */
   listSubclassBackdrops: async (): Promise<string[]> => (await unwrap(bridge().listSubclassBackdrops())) as string[],
+  /** Opens a picker and copies the chosen pictures into the app's own folder; each comes back with the URL to show it by. */
+  importFrameImage: async () => unwrap(bridge().importFrameImage()),
+  /** The same import, for pictures dropped from the OS (their paths are already known). */
+  importFrameImagePaths: async (filePaths: string[]) => unwrap(bridge().importFrameImagePaths(filePaths)),
+  /** Saves the window as it currently prints (see lib/brewPrint) to a PDF the user picks. */
+  exportFramePdf: async (suggestedName: string) => unwrap(bridge().exportFramePdf(suggestedName)),
   cloneSession: async <T>(sourceId: string, options?: { name?: string }): Promise<T> =>
     (await unwrap(bridge().cloneSession(sourceId, options))) as T,
   importMusicFiles: async <T>(regionId: string): Promise<{ canceled: boolean; tracks: T[] }> =>

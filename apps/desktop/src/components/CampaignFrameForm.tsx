@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { campaignFramesApi, type CampaignFrame, type FrameEntry } from '../api/campaignFrames';
+import { campaignFramesApi, type CampaignFrame, type FrameEntry, type FrameFormat } from '../api/campaignFrames';
+import { autoPaginate } from '../lib/brewPaginate';
 import { splitCommaList } from '../lib/frameMarkup';
+import { frameToMarkdown } from '../lib/frameToMarkdown';
 import { FRAME_ENTRY_SECTIONS, MAX_COMPLEXITY } from '../lib/frameSections';
 import AutoGrowTextarea from './AutoGrowTextarea';
+import BrewEditor from './BrewEditor';
 import CollapsibleSection from './CollapsibleSection';
 import FrameEntryListEditor from './FrameEntryListEditor';
 import GameSetSelect from './GameSetSelect';
@@ -59,24 +62,26 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
   const [incitingIncident, setIncitingIncident] = useState(initial?.incitingIncident ?? '');
   const [sessionZeroQuestions, setSessionZeroQuestions] = useState<string[]>(initial?.sessionZeroQuestions ?? []);
   const [credits, setCredits] = useState(initial?.credits ?? '');
+  const [format, setFormat] = useState<FrameFormat>(initial?.format ?? 'structured');
+  const [markdown, setMarkdown] = useState(initial?.markdown ?? '');
+  const [styleCss, setStyleCss] = useState(initial?.styleCss ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: FormEvent) {
-    e.preventDefault();
-    if (!gameSetId) {
-      setError('Choose a Game Set.');
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    const body = {
+  // Everything the form holds, in the shape it is saved in. Both formats are
+  // always sent: a frame keeps its sections while Advanced, and its Markdown
+  // while structured, so switching either way loses nothing.
+  function currentBody() {
+    return {
       name,
       gameSetId,
       concept,
       designers,
       complexity: Number(complexity) || 1,
       coverImage,
+      format,
+      markdown,
+      styleCss,
       pitch,
       toneAndFeel: splitCommaList(toneAndFeel),
       themes: splitCommaList(themes),
@@ -87,6 +92,23 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
       sessionZeroQuestions,
       credits,
     };
+  }
+
+  /** Writes the sections out as Markdown and breaks it into pages: the starting point for an Advanced frame. */
+  function startFromSections() {
+    const written = frameToMarkdown({ id: initial?.id ?? '', ...currentBody() });
+    setMarkdown(autoPaginate(written, { styleCss, frameName: name }).markdown);
+  }
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!gameSetId) {
+      setError('Choose a Game Set.');
+      return;
+    }
+    setSubmitting(true);
+    setError(null);
+    const body = currentBody();
     try {
       const frame = isEditing ? await campaignFramesApi.update(initial!.id, body) : await campaignFramesApi.create(body);
       onSaved(frame);
@@ -100,7 +122,7 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
   const filled = (text: string) => (text.trim() ? '' : ' (empty)');
 
   return (
-    <form className="create-form frame-form" onSubmit={submit}>
+    <form className={`create-form frame-form${format === 'advanced' ? ' frame-form--advanced' : ''}`} onSubmit={submit}>
       <h3 className="create-form__title">{isEditing ? `Edit ${initial!.name}` : 'New Campaign Frame'}</h3>
 
       <TextField label="Name" value={name} onChange={setName} required />
@@ -124,6 +146,47 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
         aspectRatio="2.4"
       />
 
+      <div className="frame-form__format">
+        <span className="frame-form__format-label">Format</span>
+        <div className="frame-toggle" role="group" aria-label="Format">
+          <button
+            type="button"
+            className={`frame-toggle__option${format === 'structured' ? ' frame-toggle__option--active' : ''}`}
+            aria-pressed={format === 'structured'}
+            onClick={() => setFormat('structured')}
+          >
+            Structured
+          </button>
+          <button
+            type="button"
+            className={`frame-toggle__option${format === 'advanced' ? ' frame-toggle__option--active' : ''}`}
+            aria-pressed={format === 'advanced'}
+            onClick={() => setFormat('advanced')}
+          >
+            Advanced
+          </button>
+        </div>
+        <span className="create-form__hint">
+          {format === 'structured'
+            ? 'Fill in the sections; the app lays them out.'
+            : 'Write the whole frame in Markdown as two-column pages, with pictures and watercolor.'}
+        </span>
+      </div>
+
+      {format === 'advanced' && (
+        <BrewEditor
+          markdown={markdown}
+          onMarkdownChange={setMarkdown}
+          styleCss={styleCss}
+          onStyleCssChange={setStyleCss}
+          frameName={name}
+          coverImage={coverImage}
+          onStartFromSections={startFromSections}
+        />
+      )}
+
+      {format === 'structured' && (
+        <>
       <p className="create-form__hint">
         In any text below: **bold**, *italic*, start a line with &ldquo;- &rdquo; for a bullet or &ldquo;### &rdquo; for a
         sub-heading. Each new line is a new paragraph. In a section of entries, a first entry with no heading replaces
@@ -168,6 +231,9 @@ export default function CampaignFrameForm({ initial, onSaved, onCancel }: Campai
       <CollapsibleSection title={`Credits${filled(credits)}`}>
         <LongText label="Credits" value={credits} onChange={setCredits} />
       </CollapsibleSection>
+
+        </>
+      )}
 
       {error && <p className="create-form__error">{error}</p>}
       <div className="create-form__actions">

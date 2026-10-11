@@ -421,6 +421,85 @@ function musicDir() {
   return path.join(store.getStoreDir(), 'music');
 }
 
+// ---- Campaign Frame images ----
+// Pictures placed in an Advanced-format Campaign Frame. Kept as files in
+// <store dir>/frame-images (a frame can hold many, and a data: URL apiece
+// would be rewritten with every save of data.json) and shown through the
+// same dhmedia scheme as music: dhmedia://frame-image/<generated name>.
+const FRAME_IMAGE_TYPES = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+};
+
+function frameImagesDir() {
+  return path.join(store.getStoreDir(), 'frame-images');
+}
+
+function serveFrameImage(fileName) {
+  const type = FRAME_IMAGE_TYPES[path.extname(fileName).toLowerCase()];
+  const filePath = path.join(frameImagesDir(), fileName);
+  if (!type || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 });
+  return new Response(fs.readFileSync(filePath), { headers: { 'Content-Type': type } });
+}
+
+/** Copies each picture in under a generated name; anything that isn't a picture is skipped. */
+function importFrameImages(filePaths) {
+  fs.mkdirSync(frameImagesDir(), { recursive: true });
+  const images = [];
+  for (const source of filePaths) {
+    const ext = path.extname(String(source)).toLowerCase();
+    if (!FRAME_IMAGE_TYPES[ext]) continue;
+    const fileName = `${randomUUID()}${ext}`;
+    fs.copyFileSync(source, path.join(frameImagesDir(), fileName));
+    images.push({ url: `dhmedia://frame-image/${fileName}`, name: path.basename(source, path.extname(source)) });
+  }
+  return images;
+}
+
+ipcMain.handle('frames:importImage', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: 'Add a picture',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Pictures', extensions: Object.keys(FRAME_IMAGE_TYPES).map((ext) => ext.slice(1)) }],
+  });
+  if (canceled || filePaths.length === 0) return { canceled: true, images: [] };
+  return { canceled: false, images: importFrameImages(filePaths) };
+});
+
+// Pictures dropped onto the editor: only their paths cross over, as with
+// music dropped onto a region.
+ipcMain.handle('frames:importImagePaths', (_event, filePaths) => ({ images: importFrameImages(filePaths) }));
+
+// Saves whatever the window is showing as a letter-size PDF. The renderer
+// has already put itself into its print layout (only the frame's pages);
+// the page size and zero margins come from its own @page rule.
+// DAGGERHEART_PDF_PATH stands in for the Save dialog under test.
+ipcMain.handle('frames:exportPdf', async (event, suggestedName) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  let filePath = process.env.DAGGERHEART_PDF_PATH;
+  if (!filePath) {
+    const safeName = String(suggestedName || 'campaign-frame').replace(/[\\/:*?"<>|]+/g, ' ').trim() || 'campaign-frame';
+    const result = await dialog.showSaveDialog(win, {
+      title: 'Export Campaign Frame as PDF',
+      defaultPath: `${safeName}.pdf`,
+      filters: [{ name: 'PDF', extensions: ['pdf'] }],
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+    filePath = result.filePath;
+  }
+  const pdf = await event.sender.printToPDF({
+    printBackground: true,
+    preferCSSPageSize: true,
+    margins: { top: 0, bottom: 0, left: 0, right: 0 },
+  });
+  fs.writeFileSync(filePath, pdf);
+  return { canceled: false, filePath };
+});
+
 // The renderer's page origin (http://localhost in dev, file:// packaged)
 // can't load local files directly, so audio is served over a tiny custom
 // scheme. It must be registered before the app is ready.
@@ -436,6 +515,7 @@ function serveMedia(request) {
   const fileName = decodeURIComponent(url.pathname.slice(1));
   if (!/^[A-Za-z0-9-]+\.[a-z0-9]+$/.test(fileName)) return new Response('Bad request', { status: 400 });
   if (url.hostname === 'backdrop') return serveBackdrop(fileName);
+  if (url.hostname === 'frame-image') return serveFrameImage(fileName);
   const type = AUDIO_TYPES[path.extname(fileName).toLowerCase()];
   const filePath = path.join(musicDir(), fileName);
   if (!type || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 });

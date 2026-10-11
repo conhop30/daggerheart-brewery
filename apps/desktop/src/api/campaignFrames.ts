@@ -23,10 +23,18 @@ export interface FrameEntry {
   tables: FrameTable[];
 }
 
+export type FrameFormat = 'structured' | 'advanced';
+
 export interface CampaignFrame {
   id: string;
   name: string;
   gameSetId: string;
+  /** Which of the two ways of writing a frame is the one shown: the sections below, or `markdown`. */
+  format: FrameFormat;
+  /** The Advanced format: the whole frame as one Homebrewery-style Markdown document (see lib/brew). */
+  markdown: string;
+  /** The Advanced format's own CSS, applied inside its pages only. */
+  styleCss: string;
   /** The one-line description under the title. */
   concept: string;
   designers: string;

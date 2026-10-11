@@ -12,10 +12,16 @@ as of commit `d1a8669`.
 ## Open
 
 - [ ] **Unreleased since v1.8.1.** Campaign Frames (new page, editor,
-      Campaign link), error messages in the app's own dialog
+      Campaign link, the Advanced Markdown format with pictures,
+      watercolor, per-frame CSS and PDF export), error messages in the app's own dialog
       (`alertDialog`), Equipment opening as a table, and the repo rename
       (the new address in the updater and release script) have not been
       cut as a version.
+- [ ] **Advanced format, loose ends.** Pictures in `frame-images` are
+      never cleaned up when no frame uses them, and don't travel with
+      Export Data. Text does not flow between pages while typing (Fit to
+      pages is a button). A block taller than a page can't be split.
+      Homebrewery's stat-block and class-table snippets are not ported.
 - [ ] **Campaign Frames, next steps (none asked for yet).** Frame maps;
       cover art for the official frames (Connor would have to supply
       it); rolling on a frame's tables; using a frame's mechanics inside
