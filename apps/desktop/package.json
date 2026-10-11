@@ -17,11 +17,8 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "dompurify": "^3.4.16",
     "electron-updater": "^6.8.9",
     "html-to-image": "^1.11.13",
-    "marked": "^15.0.12",
-    "marked-hbfm": "^1.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
@@ -31,9 +28,12 @@
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
     "concurrently": "^10.0.5",
+    "dompurify": "^3.4.16",
     "electron": "^31.3.1",
     "electron-builder": "^26.15.3",
     "jsdom": "^29.1.1",
+    "marked": "^15.0.12",
+    "marked-hbfm": "^1.0.1",
     "playwright": "^1.63.0",
     "typescript": "^5.5.4",
     "vite": "^5.4.2",
