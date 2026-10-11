@@ -11,12 +11,6 @@ as of commit `d1a8669`.
 
 ## Open
 
-- [ ] **Unreleased since v1.8.1.** Campaign Frames (new page, editor,
-      Campaign link, the Advanced Markdown format with pictures,
-      watercolor, per-frame CSS and PDF export), error messages in the app's own dialog
-      (`alertDialog`), Equipment opening as a table, and the repo rename
-      (the new address in the updater and release script) have not been
-      cut as a version.
 - [ ] **Advanced format, loose ends.** Pictures in `frame-images` are
       never cleaned up when no frame uses them, and don't travel with
       Export Data. Text does not flow between pages while typing (Fit to
