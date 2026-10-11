@@ -22,6 +22,10 @@ interface CampaignsPageProps {
   /** Set by the Journal bubble's "Open →" action on a campaign row — see App.tsx. */
   jumpToCampaign?: string | null;
   onCampaignJumpHandled?: () => void;
+  /** A Campaign's "Open frame" button: leaves for the Campaign Frames page — see App.tsx. */
+  onOpenFrame?: (frameId: string) => void;
+  /** Changes whenever a Campaign Frame is saved or deleted elsewhere — see App.tsx. */
+  framesRevision?: number;
 }
 
 export default function CampaignsPage({
@@ -29,6 +33,8 @@ export default function CampaignsPage({
   onJumpHandled,
   jumpToCampaign,
   onCampaignJumpHandled,
+  onOpenFrame,
+  framesRevision,
 }: CampaignsPageProps) {
   const { items: campaigns, loading, error, upsert, remove } = useApiList<Campaign>(campaignsApi.list);
   const [partyMembers, setPartyMembers] = useState<PartyMember[]>([]);
@@ -153,6 +159,8 @@ export default function CampaignsPage({
           campaign={selectedCampaign}
           onBack={() => setSelectedCampaignId(null)}
           onCampaignSaved={upsert}
+          onOpenFrame={onOpenFrame}
+          framesRevision={framesRevision}
           onCampaignDeleted={(id) => {
             remove(id);
             setSelectedCampaignId(null);

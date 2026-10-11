@@ -351,6 +351,152 @@ describe('Loot / Consumable', () => {
   });
 });
 
+describe('CampaignFrame', () => {
+  let setId;
+  beforeEach(async () => {
+    setId = (await store.createGameSet({ name: 'Homebrew' })).id;
+  });
+
+  it('needs a real Game Set', async () => {
+    await expect(store.createCampaignFrame({ name: 'Lost Legend', gameSetId: 'missing' })).rejects.toThrow(
+      'No game set with id'
+    );
+  });
+
+  it('a frame made from just a name comes back with every section present and empty', async () => {
+    const frame = await store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId });
+    expect(frame).toMatchObject({
+      name: 'Lost Legend',
+      complexity: 1,
+      coverImage: null,
+      concept: '',
+      pitch: '',
+      overview: '',
+      incitingIncident: '',
+      credits: '',
+      toneAndFeel: [],
+      themes: [],
+      touchstones: [],
+      sessionZeroQuestions: [],
+      communities: [],
+      ancestries: [],
+      classes: [],
+      playerPrinciples: [],
+      gmPrinciples: [],
+      distinctions: [],
+      mechanics: [],
+    });
+  });
+
+  it('clamps complexity into 1-5', async () => {
+    const frame = await store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId, complexity: 9 });
+    expect(frame.complexity).toBe(5);
+    expect((await store.updateCampaignFrame(frame.id, { complexity: 0 })).complexity).toBe(1);
+    expect((await store.updateCampaignFrame(frame.id, { complexity: 'lots' })).complexity).toBe(1);
+  });
+
+  it('forces entries, questions and tables into shape', async () => {
+    const frame = await store.createCampaignFrame({
+      name: 'Lost Legend',
+      gameSetId: setId,
+      themes: ['Loss', '  ', 7],
+      mechanics: [
+        {
+          heading: 'Pivoting Fate',
+          body: 'Count up.',
+          questions: ['Why?', ''],
+          tables: [{ title: 'Pivoting Fate', columns: ['Tier', 'Start'], rows: [['I', '3', 'extra'], ['II'], 'nope'] }],
+        },
+        { heading: 'Bare' },
+        null,
+      ],
+    });
+    expect(frame.themes).toEqual(['Loss', '7']);
+    expect(frame.mechanics).toEqual([
+      {
+        heading: 'Pivoting Fate',
+        body: 'Count up.',
+        questions: ['Why?'],
+        tables: [
+          {
+            title: 'Pivoting Fate',
+            caption: '',
+            columns: ['Tier', 'Start'],
+            rows: [
+              ['I', '3'],
+              ['II', ''],
+              ['', ''],
+            ],
+          },
+        ],
+      },
+      { heading: 'Bare', body: '', questions: [], tables: [] },
+      { heading: '', body: '', questions: [], tables: [] },
+    ]);
+  });
+
+  it('update follows PATCH semantics, section by section', async () => {
+    const frame = await store.createCampaignFrame({
+      name: 'Lost Legend',
+      gameSetId: setId,
+      pitch: 'Hope was a force.',
+      gmPrinciples: [{ heading: 'The Night Is Darkest', body: 'Before the dawn.' }],
+    });
+    const updated = await store.updateCampaignFrame(frame.id, { pitch: 'Hope is a force.' });
+    expect(updated.pitch).toBe('Hope is a force.');
+    expect(updated.gmPrinciples).toHaveLength(1);
+  });
+
+  it('rejects a cover that is not an image', async () => {
+    await expect(
+      store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId, coverImage: 'https://example.com/a.png' })
+    ).rejects.toThrow('coverImage must be an image data URL');
+  });
+
+  it('a record stored before a section existed still reads back whole', async () => {
+    await store.importSnapshot({ campaignFrames: [{ id: 'old-frame', name: 'Old Frame', gameSetId: setId }] });
+    const [frame] = store.listCampaignFrames();
+    expect(frame.distinctions).toEqual([]);
+    expect(frame.pitch).toBe('');
+    expect(frame.complexity).toBe(1);
+  });
+
+  it('a Campaign can link to a frame, and only to one that exists', async () => {
+    const frame = await store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId });
+    const campaign = await store.createCampaign({ name: 'Eldrefell', campaignFrameId: frame.id });
+    expect(campaign.campaignFrameId).toBe(frame.id);
+    await expect(store.updateCampaign(campaign.id, { campaignFrameId: 'missing' })).rejects.toThrow(
+      'No campaign frame with id'
+    );
+    expect((await store.createCampaign({ name: 'Unframed' })).campaignFrameId).toBeNull();
+  });
+
+  it('deleting a frame keeps its Campaigns and clears their link', async () => {
+    const frame = await store.createCampaignFrame({ name: 'Lost Legend', gameSetId: setId });
+    const other = await store.createCampaignFrame({ name: 'Witherwild', gameSetId: setId });
+    const a = await store.createCampaign({ name: 'Eldrefell', campaignFrameId: frame.id });
+    const b = await store.createCampaign({ name: 'Fanewick', campaignFrameId: other.id });
+    await store.removeCampaignFrame(frame.id);
+    expect(store.listCampaignFrames().map((f) => f.name)).toEqual(['Witherwild']);
+    const campaigns = store.listCampaigns();
+    expect(campaigns.find((c) => c.id === a.id).campaignFrameId).toBeNull();
+    expect(campaigns.find((c) => c.id === b.id).campaignFrameId).toBe(other.id);
+    await expect(store.removeCampaignFrame(frame.id)).rejects.toThrow('No record with id');
+  });
+
+  it('round-trips through Export and Import', async () => {
+    const frame = await store.createCampaignFrame({
+      name: 'Lost Legend',
+      gameSetId: setId,
+      sessionZeroQuestions: ['What records does your character keep?'],
+    });
+    const snapshot = JSON.parse(JSON.stringify(store.exportSnapshot()));
+    await store.removeCampaignFrame(frame.id);
+    await store.importSnapshot(snapshot);
+    expect(store.listCampaignFrames()).toEqual([frame]);
+  });
+});
+
 describe('Campaign', () => {
   it('create is idempotent by name, case-insensitive', async () => {
     const a = await store.createCampaign({ name: 'The Wildwood' });

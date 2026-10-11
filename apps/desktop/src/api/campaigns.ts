@@ -11,6 +11,8 @@ export interface Campaign {
   coverImage: string | null;
   /** Pre-fills this Campaign's first Session's music region; null = none (falls back to the built-in Everywhere region). Must be an application-wide region or one already scoped to this Campaign. */
   defaultRegionId: string | null;
+  /** The Campaign Frame this Campaign is played in, if any. Cleared when that frame is deleted. */
+  campaignFrameId: string | null;
 }
 
 export interface CreateCampaignRequest {
@@ -20,6 +22,7 @@ export interface CreateCampaignRequest {
   level?: number;
   coverImage?: string | null;
   defaultRegionId?: string | null;
+  campaignFrameId?: string | null;
 }
 
 export interface UpdateCampaignRequest {
@@ -29,6 +32,7 @@ export interface UpdateCampaignRequest {
   level?: number;
   coverImage?: string | null;
   defaultRegionId?: string | null;
+  campaignFrameId?: string | null;
 }
 
 export const campaignsApi = createCrudApi<Campaign, CreateCampaignRequest, UpdateCampaignRequest>('campaigns');

@@ -95,6 +95,36 @@
   max-width: 640px;
 }
 
+.campaign-detail__frame {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px var(--space-2);
+  margin-top: var(--space-2);
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.campaign-detail__frame-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.campaign-detail__frame-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: #ffffff;
+}
+
+.campaign-detail__frame-concept {
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.85);
+}
+
 .campaign-detail__hero-actions {
   display: flex;
   justify-content: flex-end;

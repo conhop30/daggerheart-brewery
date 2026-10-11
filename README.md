@@ -181,6 +181,33 @@ validation. Highlights:
   couldn't hit the same accuracy bar as everything else, so they were
   deliberately left unseeded rather than imported with silent corruption.
 
+### Campaign Frames
+
+A Campaign Frame is the rulebook's format for pitching a setting: a pitch
+to read aloud, tone/themes/touchstones, an overview, notes on how certain
+Communities, Ancestries and Classes fit, Player and GM Principles,
+Distinctions, an inciting incident, custom Campaign Mechanics and session
+zero questions. The Campaign Frames page holds them as a gallery; opening
+one gives a reading page in the book's section order with a jump list, and
+only the sections that have been written.
+
+- **One entry shape for every repeatable section.** A Community's notes
+  and prompts, a principle, a distinction and a mechanic are all a heading,
+  a body, optional questions and optional tables, so one editor
+  (`FrameEntryListEditor`) and one reader component serve seven sections,
+  driven from a single list (`lib/frameSections.ts`) that fixes their
+  titles and order in both places.
+- **A deliberately small markup**, parsed to data rather than HTML
+  (`lib/frameMarkup.ts`): bold, italic (each may hold the other), bullets
+  and sub-headings. `FrameText` draws the parsed blocks as React elements;
+  nothing is ever injected as markup.
+- **Real tables** for mechanics (a countdown's values per tier, a d12
+  feature table), edited in a small grid; the store keeps every row
+  exactly as wide as its header.
+- **A Campaign can name the frame it is played in.** Its page shows the
+  frame's name and concept with a button that opens it. Deleting a frame
+  never deletes a Campaign; it only clears the link.
+
 ### Session Builder (complete, and growing)
 
 A second top-level section for actually *running* a game on top of the
@@ -590,8 +617,12 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       Environments do, with Cards one click away
 - [x] Every message the app raises (delete confirmations and errors
       alike) uses the app's own dialog instead of a system pop-up
+- [x] Campaign Frames: a gallery, a book-order reading page, a structured
+      editor with tables, and an optional link from a Campaign
 - [ ] A table view for Heritage and Optional Mechanics (a shared card
       grid today)
+- [ ] Campaign Frame maps, and using a frame's mechanics inside a live
+      Session
 - [ ] Corebook Loot/Consumables and Hope & Fear Consumables data
 
 ## Getting Started

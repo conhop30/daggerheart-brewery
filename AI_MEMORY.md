@@ -194,6 +194,27 @@ the result out. Adversary type is now required on the form (not in
 being run** (Connor's call) — see `TODO.md`'s entry, and run it before
 building further on Session-page code.
 
+Campaign Frames (2026-10-10, unreleased; 315 Vitest, 111 Playwright green):
+a `campaignFrames` collection (plain `makeCollection`, in `COLLECTIONS`)
+and its own nav page. Shape and section order live in two mirrored lists:
+`FRAME_*` constants in `electron/store.js` and `lib/frameSections.ts`
+(main and renderer share no modules) — add a section to both. Every
+repeatable section is a list of `FrameEntry` (`heading`, `body`,
+`questions[]`, `tables[]`); an entry with a blank heading reads as a
+lead-in paragraph, which is how a section-level note is written. Text
+markup is `lib/frameMarkup.ts` (each line a paragraph; `**`, `*`, `- `,
+`### `), drawn by `FrameText` with no `dangerouslySetInnerHTML`.
+`Campaign.campaignFrameId` is optional; `removeCampaignFrame` clears it.
+`App.tsx` carries `jumpToFrame` (a Campaign's "Open frame") and
+`framesRevision` (so a mounted Campaign page re-reads its frame after an
+edit or delete elsewhere). The nav bar no longer wraps as a whole: only
+`.app-shell__nav` wraps, so the Settings gear stays on the first row with
+eight links. Official frames (6 Core, 4 Hope & Fear) and Connor's own
+*Lost Legend of Hope* are loaded into his live store only, text only —
+never into the repo, the seed or a release, same rule as book art. Not
+built: frame maps, cover art from the books, rollable frame tables, and
+frame mechanics inside a Session.
+
 After v1.8.1 (2026-10-10): no `window.alert` or `window.confirm` is left
 in `src` — errors go through `alertDialog` and questions through
 `confirmDialog` (both `lib/confirm`, both drawn by `ConfirmHost`; a notice

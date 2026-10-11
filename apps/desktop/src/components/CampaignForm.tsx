@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { campaignsApi, type Campaign } from '../api/campaigns';
 import { musicApi, type MusicRegion } from '../api/music';
+import { campaignFramesApi, type CampaignFrame } from '../api/campaignFrames';
 import ImageUploadField from './ImageUploadField';
 import TextField from './TextField';
 import TextAreaField from './TextAreaField';
@@ -25,6 +26,8 @@ export default function CampaignForm({ initial, onSaved, onCancel }: CampaignFor
   const [coverImage, setCoverImage] = useState<string | null>(initial?.coverImage ?? null);
   const [defaultRegionId, setDefaultRegionId] = useState(initial?.defaultRegionId ?? '');
   const [regions, setRegions] = useState<MusicRegion[]>([]);
+  const [campaignFrameId, setCampaignFrameId] = useState(initial?.campaignFrameId ?? '');
+  const [frames, setFrames] = useState<CampaignFrame[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,15 @@ export default function CampaignForm({ initial, onSaved, onCancel }: CampaignFor
       });
   }, [initial?.id]);
 
+  useEffect(() => {
+    campaignFramesApi
+      .list()
+      .then((list) => setFrames([...list].sort((a, b) => a.name.localeCompare(b.name))))
+      .catch(() => {
+        // Running outside Electron — the field just shows "None".
+      });
+  }, []);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
@@ -51,6 +63,7 @@ export default function CampaignForm({ initial, onSaved, onCancel }: CampaignFor
       level: Number(level) || 1,
       coverImage,
       defaultRegionId: defaultRegionId || null,
+      campaignFrameId: campaignFrameId || null,
     };
     try {
       const campaign = isEditing ? await campaignsApi.update(initial!.id, body) : await campaignsApi.create(body);
@@ -79,6 +92,14 @@ export default function CampaignForm({ initial, onSaved, onCancel }: CampaignFor
         onChange={setCoverImage}
         aspectRatio="2.4"
       />
+      <SelectField label="Campaign Frame" value={campaignFrameId} onChange={setCampaignFrameId}>
+        <option value="">None</option>
+        {frames.map((frame) => (
+          <option key={frame.id} value={frame.id}>
+            {frame.name}
+          </option>
+        ))}
+      </SelectField>
       <SelectField label="Default Music Folder" value={defaultRegionId} onChange={setDefaultRegionId}>
         <option value="">No default</option>
         {regions.map((region) => (

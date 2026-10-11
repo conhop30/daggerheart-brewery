@@ -1,0 +1,88 @@
+.frames-page__header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.frames-page__form {
+  border-top: 1px solid var(--hairline);
+  border-bottom: 1px solid var(--hairline);
+  padding: var(--space-3) 0;
+  margin-bottom: var(--space-4);
+}
+
+.frames-page__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--space-3);
+}
+
+.frame-card {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--font-body);
+  transition:
+    border-color 200ms var(--ease),
+    transform 200ms var(--ease);
+}
+
+.frame-card:hover {
+  border-color: var(--hope);
+  transform: translateY(-2px);
+}
+
+/* The same deep green as an open frame's hero when there's no cover art. */
+.frame-card__art {
+  display: block;
+  width: 100%;
+  height: 120px;
+  background: linear-gradient(160deg, #2f5a25, rgba(0, 0, 0, 0.55)), #1e1a28;
+  background-size: cover;
+  background-position: center;
+}
+
+.frame-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3);
+}
+
+.frame-card__title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem;
+}
+
+.frame-card__concept {
+  font-style: italic;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--ink-dim);
+}
+
+.frame-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px var(--space-2);
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.frame-card__meta .frame-pips {
+  color: var(--hope-on-dark);
+}
+
+.frame-card__tone {
+  font-size: 0.74rem;
+  line-height: 1.5;
+  color: var(--muted);
+}

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState, type ReactNode } from 'react';
 import type { SessionJumpRequest } from './pages/CampaignsPage';
 import AppShell, { type View } from './components/AppShell';
 import FloatingMusicPlayer from './components/FloatingMusicPlayer';
@@ -18,6 +18,7 @@ const DomainsPage = lazy(() => import('./pages/DomainsPage'));
 const HeritagePage = lazy(() => import('./pages/HeritagePage'));
 const EquipmentPage = lazy(() => import('./pages/EquipmentPage'));
 const OptionalMechanicsPage = lazy(() => import('./pages/OptionalMechanicsPage'));
+const CampaignFramesPage = lazy(() => import('./pages/CampaignFramesPage'));
 const CampaignsPage = lazy(() => import('./pages/CampaignsPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
@@ -29,6 +30,13 @@ export default function App() {
   const [view, setView] = useState<View>('home');
   const [jumpToSession, setJumpToSession] = useState<SessionJumpRequest | null>(null);
   const [jumpToCampaign, setJumpToCampaign] = useState<string | null>(null);
+  const [jumpToFrame, setJumpToFrame] = useState<string | null>(null);
+  // Bumped whenever a Campaign Frame is saved or deleted. The Campaigns page
+  // stays mounted while that happens on another page, so this is how an open
+  // Campaign learns the frame it names has changed or gone.
+  const [framesRevision, setFramesRevision] = useState(0);
+  const handleFramesChanged = useCallback(() => setFramesRevision((n) => n + 1), []);
+  const handleFrameJumpHandled = useCallback(() => setJumpToFrame(null), []);
 
   // Every view the user has opened this run stays mounted (hidden via CSS)
   // instead of unmounting on nav away — a page's own useApiList calls only
@@ -59,12 +67,25 @@ export default function App() {
             {page('equipment', <EquipmentPage />)}
             {page('optional-mechanics', <OptionalMechanicsPage />)}
             {page(
+              'campaign-frames',
+              <CampaignFramesPage
+                jumpToFrame={jumpToFrame}
+                onJumpHandled={handleFrameJumpHandled}
+                onFramesChanged={handleFramesChanged}
+              />
+            )}
+            {page(
               'campaigns',
               <CampaignsPage
                 jumpToSession={jumpToSession}
                 onJumpHandled={() => setJumpToSession(null)}
                 jumpToCampaign={jumpToCampaign}
                 onCampaignJumpHandled={() => setJumpToCampaign(null)}
+                framesRevision={framesRevision}
+                onOpenFrame={(frameId) => {
+                  setJumpToFrame(frameId);
+                  setView('campaign-frames');
+                }}
               />
             )}
             {page('settings', <SettingsPage />)}

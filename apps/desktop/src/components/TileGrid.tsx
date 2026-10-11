@@ -8,6 +8,7 @@ interface TileGridProps {
   heritageCount: number;
   equipmentCount: number;
   optionalMechanicsCount: number;
+  campaignFrameCount: number;
   onNavigate: (view: View) => void;
 }
 
@@ -25,6 +26,7 @@ export default function TileGrid({
   heritageCount,
   equipmentCount,
   optionalMechanicsCount,
+  campaignFrameCount,
   onNavigate,
 }: TileGridProps) {
   const tiles: Tile[] = [
@@ -63,6 +65,12 @@ export default function TileGrid({
       title: 'Optional Mechanics',
       description: 'Transformation and mechanics like it.',
       status: `${optionalMechanicsCount} built`,
+    },
+    {
+      view: 'campaign-frames',
+      title: 'Campaign Frames',
+      description: 'Settings to pitch, with their principles and mechanics.',
+      status: `${campaignFrameCount} built`,
     },
   ];
 

@@ -8,8 +8,7 @@
   z-index: 20;
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2) var(--space-3);
   padding: var(--space-2) var(--space-4);
   border-bottom: 1px solid var(--hairline);
   background: var(--panel);
@@ -47,10 +46,20 @@
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
 }
 
+/* The links are the part of the bar that gives: on a narrow window they
+   wrap onto a second row among themselves, and the brand and the Settings
+   gear stay put at either end. */
 .app-shell__nav {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  flex: 1 1 auto;
+  min-width: 0;
+  gap: 2px var(--space-1);
+}
+
+.app-shell__brand,
+.app-shell__settings {
+  flex-shrink: 0;
 }
 
 .app-shell__settings {
@@ -98,7 +107,8 @@
   font-weight: 600;
   font-size: 0.8rem;
   letter-spacing: 0.03em;
-  padding: 0.35rem 0.7rem;
+  padding: 0.35rem 0.55rem;
+  white-space: nowrap;
   transition:
     color 200ms var(--ease),
     text-shadow 200ms var(--ease);

@@ -1,0 +1,155 @@
+/* A frame is pages of prose, so its form gets a reading-width column
+   rather than .create-form's narrow 520px. */
+.create-form.frame-form {
+  max-width: 820px;
+}
+
+.frame-form .collapsible-section {
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--space-2);
+  margin-top: 0;
+}
+
+.frame-form .collapsible-section__toggle {
+  font-size: 0.78rem;
+}
+
+.frame-form .collapsible-section__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.frame-form .frame-form__long,
+.frame-form .frame-entry-editor__body {
+  width: 100%;
+  min-height: 4.5rem;
+  line-height: 1.55;
+  resize: none;
+}
+
+.frame-entry-editor__entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2) 0 var(--space-2) var(--space-2);
+  border-left: 3px solid var(--hope-dim);
+  border-top: 2px solid transparent;
+  margin-bottom: var(--space-2);
+}
+
+.frame-entry-editor__entry.is-drag-over {
+  border-top-color: var(--hope);
+}
+
+.frame-entry-editor__head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.frame-form .frame-entry-editor__heading {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.02rem;
+}
+
+.frame-entry-editor__entry .feature-editor {
+  margin-top: 0;
+}
+
+.frame-table-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  border: 1px solid var(--hairline);
+}
+
+.frame-table-editor__head {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.frame-form .frame-table-editor__title {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.82rem;
+}
+
+.frame-table-editor__remove-table {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.68rem;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+
+.frame-table-editor__remove-table:hover {
+  border-color: var(--fear-on-dark);
+  color: var(--fear-on-dark);
+}
+
+.frame-table-editor__scroll {
+  overflow-x: auto;
+}
+
+.frame-table-editor__grid {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.frame-table-editor__grid th,
+.frame-table-editor__grid td {
+  padding: 2px;
+  vertical-align: top;
+  min-width: 7rem;
+}
+
+.frame-table-editor__grid .frame-table-editor__gutter {
+  min-width: 0;
+  width: 2rem;
+}
+
+.frame-table-editor__column {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px;
+}
+
+.frame-form .frame-table-editor__grid input,
+.frame-form .frame-table-editor__grid textarea {
+  width: 100%;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.5rem;
+  resize: none;
+}
+
+.frame-form .frame-table-editor__grid th input {
+  font-weight: 600;
+}
+
+.frame-table-editor__x {
+  background: none;
+  border: 1px solid var(--hairline);
+  color: var(--muted);
+  width: 1.8rem;
+  height: 1.9rem;
+}
+
+.frame-table-editor__x:hover {
+  border-color: var(--fear-on-dark);
+  color: var(--fear-on-dark);
+}
+
+.frame-table-editor__adds {
+  display: flex;
+  gap: var(--space-3);
+}

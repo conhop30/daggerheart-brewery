@@ -10,6 +10,7 @@ import { consumablesApi } from '../api/consumables';
 import { communitiesApi } from '../api/communities';
 import { ancestriesApi } from '../api/ancestries';
 import { transformationsApi } from '../api/transformations';
+import { campaignFramesApi } from '../api/campaignFrames';
 import type { ContentKey } from '../api/contentKeys';
 import { backupApi } from '../api/backup';
 import CreatePanel from '../components/CreatePanel';
@@ -38,6 +39,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [heroClasses, setHeroClasses] = useState<HeroClass[]>([]);
   const [counts, setCounts] = useState<Record<ContentKey, number>>(EMPTY_COUNTS);
+  const [campaignFrameCount, setCampaignFrameCount] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState<string | null>(null);
@@ -62,6 +64,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         communities,
         ancestries,
         transformations,
+        campaignFrames,
       ] = await Promise.all([
         domainsApi.list(),
         heroClassesApi.list(),
@@ -74,6 +77,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         communitiesApi.list(),
         ancestriesApi.list(),
         transformationsApi.list(),
+        campaignFramesApi.list(),
       ]);
       if (!mountedRef.current) return;
       setDomains(domainList);
@@ -89,6 +93,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         ancestries: ancestries.length,
         transformations: transformations.length,
       });
+      setCampaignFrameCount(campaignFrames.length);
     } catch (err) {
       if (!mountedRef.current) return;
       setLoadError(err instanceof Error ? err.message : 'Could not load your data.');
@@ -176,6 +181,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
         heritageCount={counts.communities + counts.ancestries}
         equipmentCount={counts.weapons + counts.armors + counts.loot + counts.consumables}
         optionalMechanicsCount={counts.transformations}
+        campaignFrameCount={campaignFrameCount}
         onNavigate={onNavigate}
       />
     </div>

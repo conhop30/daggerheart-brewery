@@ -128,6 +128,7 @@ const LIST = {
   communities: store.listCommunities,
   ancestries: store.listAncestries,
   transformations: store.listTransformations,
+  campaignFrames: store.listCampaignFrames,
   campaigns: store.listCampaigns,
   partyMembers: store.listPartyMembers,
   lootTables: store.listLootTables,
@@ -156,6 +157,7 @@ const CREATE = {
   communities: store.createCommunity,
   ancestries: store.createAncestry,
   transformations: store.createTransformation,
+  campaignFrames: store.createCampaignFrame,
   campaigns: store.createCampaign,
   partyMembers: store.createPartyMember,
   lootTables: store.createLootTable,
@@ -185,6 +187,7 @@ const UPDATE = {
   communities: store.updateCommunity,
   ancestries: store.updateAncestry,
   transformations: store.updateTransformation,
+  campaignFrames: store.updateCampaignFrame,
   campaigns: store.updateCampaign,
   partyMembers: store.updatePartyMember,
   lootTables: store.updateLootTable,
@@ -215,6 +218,7 @@ const REMOVE = {
   communities: store.removeCommunity,
   ancestries: store.removeAncestry,
   transformations: store.removeTransformation,
+  campaignFrames: store.removeCampaignFrame,
   // Campaign delete cascades to PartyMembers (and, once Sessions exist, to
   // Sessions/SessionAdversaries/SessionEnvironments) inside store.js itself
   // — unlike Domain/Card, a Campaign's children have no other reachable

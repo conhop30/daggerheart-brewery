@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { campaignsApi, type Campaign } from '../api/campaigns';
 import { sessionsApi, type Session } from '../api/sessions';
+import { campaignFramesApi, type CampaignFrame } from '../api/campaignFrames';
 import CampaignMusicSidebar from './CampaignMusicSidebar';
 import CampaignForm from './CampaignForm';
 import PartyRoster from './PartyRoster';
@@ -15,6 +16,10 @@ interface CampaignDetailProps {
   onCampaignSaved: (updated: Campaign) => void;
   onCampaignDeleted: (id: string) => void;
   onOpenSession: (session: Session) => void;
+  /** Leaves for the Campaign Frames page with this frame open. */
+  onOpenFrame?: (frameId: string) => void;
+  /** Changes whenever a Campaign Frame is saved or deleted elsewhere, so the linked frame is looked up again. */
+  framesRevision?: number;
 }
 
 export default function CampaignDetail({
@@ -23,9 +28,34 @@ export default function CampaignDetail({
   onCampaignSaved,
   onCampaignDeleted,
   onOpenSession,
+  onOpenFrame,
+  framesRevision,
 }: CampaignDetailProps) {
   const [editing, setEditing] = useState(false);
   const [mostRecentSession, setMostRecentSession] = useState<Session | null>(null);
+  const [frame, setFrame] = useState<CampaignFrame | null>(null);
+
+  // The linked frame can be renamed or deleted on its own page while this
+  // one stays mounted (framesRevision says when), and a deleted frame
+  // should simply stop being mentioned.
+  useEffect(() => {
+    if (!campaign.campaignFrameId) {
+      setFrame(null);
+      return;
+    }
+    let cancelled = false;
+    campaignFramesApi
+      .list()
+      .then((frames) => {
+        if (!cancelled) setFrame(frames.find((f) => f.id === campaign.campaignFrameId) ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setFrame(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [campaign.campaignFrameId, framesRevision]);
 
   // Sessions come back in creation order, so the last one is the most
   // recent — same convention SessionList already relies on for "Clone Most
@@ -94,6 +124,18 @@ export default function CampaignDetail({
             <span className="campaign-detail__level">Party Level {campaign.level}</span>
             <h1 className="campaign-detail__title">{campaign.name}</h1>
             {campaign.notes && <p className="campaign-detail__notes">{campaign.notes}</p>}
+            {frame && (
+              <p className="campaign-detail__frame">
+                <span className="campaign-detail__frame-label">Campaign Frame</span>
+                <span className="campaign-detail__frame-name">{frame.name}</span>
+                {frame.concept && <span className="campaign-detail__frame-concept">{frame.concept}</span>}
+                {onOpenFrame && (
+                  <button type="button" className="campaign-detail__hero-action" onClick={() => onOpenFrame(frame.id)}>
+                    Open frame
+                  </button>
+                )}
+              </p>
+            )}
           </div>
         </div>
       )}

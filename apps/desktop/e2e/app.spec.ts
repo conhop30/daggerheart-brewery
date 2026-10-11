@@ -20,6 +20,7 @@ const COLLECTIONS = [
   'communities',
   'ancestries',
   'transformations',
+  'campaignFrames',
   'campaigns',
   'partyMembers',
   'lootTables',
@@ -81,6 +82,7 @@ test.describe('Electron app', () => {
       'Heritage',
       'Equipment',
       'Optional Mechanics',
+      'Campaign Frames',
       'Campaigns',
     ];
     for (const label of labels) {
@@ -479,7 +481,7 @@ test.describe('Plain browser tab (no Electron)', () => {
 
     const rootHtml = await page.evaluate(() => document.getElementById('root')?.innerHTML ?? '');
     expect(rootHtml.length).toBeGreaterThan(50);
-    await expect(page.locator('.app-shell__nav-link')).toHaveCount(7);
+    await expect(page.locator('.app-shell__nav-link')).toHaveCount(8);
     await expect(page.locator('body')).toContainText('needs to run inside the Electron shell');
     expect(pageErrors).toEqual([]);
 

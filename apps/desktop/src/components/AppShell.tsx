@@ -12,6 +12,7 @@ export type View =
   | 'heritage'
   | 'equipment'
   | 'optional-mechanics'
+  | 'campaign-frames'
   | 'campaigns'
   | 'settings';
 
@@ -30,6 +31,7 @@ const NAV_LINKS: NavLink[] = [
   { view: 'heritage', label: 'Heritage' },
   { view: 'equipment', label: 'Equipment' },
   { view: 'optional-mechanics', label: 'Optional Mechanics' },
+  { view: 'campaign-frames', label: 'Campaign Frames' },
   { view: 'campaigns', label: 'Campaigns' },
 ];
 

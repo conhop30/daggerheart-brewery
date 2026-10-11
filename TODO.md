@@ -11,10 +11,15 @@ as of commit `d1a8669`.
 
 ## Open
 
-- [ ] **Unreleased since v1.8.1.** Error messages in the app's own dialog
+- [ ] **Unreleased since v1.8.1.** Campaign Frames (new page, editor,
+      Campaign link), error messages in the app's own dialog
       (`alertDialog`), Equipment opening as a table, and the repo rename
       (the new address in the updater and release script) have not been
       cut as a version.
+- [ ] **Campaign Frames, next steps (none asked for yet).** Frame maps;
+      cover art for the official frames (Connor would have to supply
+      it); rolling on a frame's tables; using a frame's mechanics inside
+      a Session (e.g. a Pivoting Fate countdown on an Adversary tile).
 - [ ] **A collapsed stack still lists every member's row.** Collapse All
       hides HP/Stress on single tiles, but a stack's rows are its trackers
       and stay. Connor wants to revisit how stacking behaves; keep this

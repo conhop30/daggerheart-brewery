@@ -38,6 +38,7 @@ const COLLECTIONS = [
   'communities',
   'ancestries',
   'transformations',
+  'campaignFrames',
   'campaigns',
   'partyMembers',
   'lootTables',
@@ -999,6 +1000,9 @@ function validateCampaign(store, data) {
     data.level = Math.max(1, Math.min(10, Math.round(Number(data.level)) || 1));
   }
   validateImageDataUrl(data, 'coverImage');
+  if (data.campaignFrameId != null && !store.campaignFrames.some((f) => f.id === data.campaignFrameId)) {
+    throw new Error(`No campaign frame with id ${data.campaignFrameId}`);
+  }
   if (data.defaultRegionId != null) {
     const region = store.musicRegions.find((r) => r.id === data.defaultRegionId);
     if (!region) throw new Error(`No music region with id ${data.defaultRegionId}`);
@@ -1098,12 +1102,18 @@ const campaigns = makeCollection('campaigns', {
     level: data.level ?? 1,
     coverImage: data.coverImage ?? null,
     defaultRegionId: data.defaultRegionId ?? null,
+    campaignFrameId: data.campaignFrameId ?? null,
   }),
-  // A Campaign created before coverImage/defaultRegionId existed has no
-  // such keys at all — default them at read time (never rewriting the
-  // stored record), same fix as the Music track volume read-time default
-  // above.
-  present: (_store, record) => ({ ...record, coverImage: record.coverImage ?? null, defaultRegionId: record.defaultRegionId ?? null }),
+  // A Campaign created before coverImage/defaultRegionId/campaignFrameId
+  // existed has no such keys at all — default them at read time (never
+  // rewriting the stored record), same fix as the Music track volume
+  // read-time default above.
+  present: (_store, record) => ({
+    ...record,
+    coverImage: record.coverImage ?? null,
+    defaultRegionId: record.defaultRegionId ?? null,
+    campaignFrameId: record.campaignFrameId ?? null,
+  }),
 });
 
 function removeCampaign(id) {
@@ -1121,6 +1131,90 @@ function removeCampaign(id) {
     // application-wide rather than destroyed along with the Campaign — same
     // "keep the folder's tracks" spirit as removeMusicRegion above.
     for (const region of store.musicRegions) if (region.campaignId === id) region.campaignId = null;
+  });
+}
+
+// ---- Campaign Frames ----
+// A campaign frame as the rulebook lays one out: a pitch, the lists that
+// set its tone, an overview, then sections of headed entries (how certain
+// Communities/Ancestries/Classes fit, Player and GM Principles,
+// Distinctions, Campaign Mechanics), an inciting incident and session zero
+// questions. Every repeatable section holds the same entry shape — a
+// heading, a body, optional questions, optional tables — so "Loreborne and
+// Highborne" with its prompts and a custom mechanic with its roll tables are
+// one kind of thing with different parts filled in.
+
+const FRAME_TEXT_FIELDS = ['concept', 'designers', 'pitch', 'overview', 'incitingIncident', 'credits'];
+const FRAME_LIST_FIELDS = ['toneAndFeel', 'themes', 'touchstones', 'sessionZeroQuestions'];
+const FRAME_ENTRY_SECTIONS = [
+  'communities',
+  'ancestries',
+  'classes',
+  'playerPrinciples',
+  'gmPrinciples',
+  'distinctions',
+  'mechanics',
+];
+
+const frameText = (value) => (typeof value === 'string' ? value : value == null ? '' : String(value));
+
+/** Blank rows are an editor's empty "add another" line, not content. */
+function sanitizeFrameList(list) {
+  return Array.isArray(list) ? list.map(frameText).filter((s) => s.trim() !== '') : [];
+}
+
+/** Every row ends up exactly as wide as the header, so the reader never has to guess. */
+function sanitizeFrameTable(table) {
+  const columns = Array.isArray(table?.columns) ? table.columns.map(frameText) : [];
+  const rows = Array.isArray(table?.rows)
+    ? table.rows.map((row) => columns.map((_, i) => frameText(Array.isArray(row) ? row[i] : '')))
+    : [];
+  return { title: frameText(table?.title), caption: frameText(table?.caption), columns, rows };
+}
+
+function sanitizeFrameEntry(entry) {
+  return {
+    heading: frameText(entry?.heading),
+    body: frameText(entry?.body),
+    questions: sanitizeFrameList(entry?.questions),
+    tables: Array.isArray(entry?.tables) ? entry.tables.map(sanitizeFrameTable) : [],
+  };
+}
+
+function validateCampaignFrame(store, data) {
+  validateGameSetRef(store, data);
+  clampNumber(data, 'complexity', { min: 1, max: 5, allowNull: false });
+  validateImageDataUrl(data, 'coverImage');
+  for (const field of FRAME_TEXT_FIELDS) if (data[field] !== undefined) data[field] = frameText(data[field]);
+  for (const field of FRAME_LIST_FIELDS) if (data[field] !== undefined) data[field] = sanitizeFrameList(data[field]);
+  for (const field of FRAME_ENTRY_SECTIONS) {
+    if (data[field] !== undefined) data[field] = Array.isArray(data[field]) ? data[field].map(sanitizeFrameEntry) : [];
+  }
+}
+
+/** Fills in whatever a record lacks, for build (a sparse create) and present (a record older than a field) alike. */
+function withFrameDefaults(record) {
+  const result = { ...record, complexity: record.complexity ?? 1, coverImage: record.coverImage ?? null };
+  for (const field of FRAME_TEXT_FIELDS) result[field] = record[field] ?? '';
+  for (const field of [...FRAME_LIST_FIELDS, ...FRAME_ENTRY_SECTIONS]) result[field] = record[field] ?? [];
+  return result;
+}
+
+const campaignFrames = makeCollection('campaignFrames', {
+  validate: validateCampaignFrame,
+  buildRecord: (data) => withFrameDefaults({ ...data, id: randomUUID(), name: data.name, gameSetId: data.gameSetId }),
+  present: (_store, record) => withFrameDefaults(record),
+});
+
+// A frame is reference material a Campaign points at, not something it
+// owns, so deleting one leaves its Campaigns in place and only clears the
+// link — the same treatment a deleted music folder gets.
+function removeCampaignFrame(id) {
+  return mutate((store) => {
+    const index = store.campaignFrames.findIndex((f) => f.id === id);
+    if (index === -1) throw new Error(`No record with id ${id}`);
+    store.campaignFrames.splice(index, 1);
+    for (const campaign of store.campaigns) if (campaign.campaignFrameId === id) campaign.campaignFrameId = null;
   });
 }
 
@@ -2037,6 +2131,10 @@ module.exports = {
   createTransformation: transformations.create,
   updateTransformation: transformations.update,
   removeTransformation: transformations.remove,
+  listCampaignFrames: campaignFrames.list,
+  createCampaignFrame: campaignFrames.create,
+  updateCampaignFrame: campaignFrames.update,
+  removeCampaignFrame,
   listCampaigns: campaigns.list,
   createCampaign: campaigns.create,
   updateCampaign: campaigns.update,
