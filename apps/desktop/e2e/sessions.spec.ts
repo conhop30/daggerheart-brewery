@@ -1380,4 +1380,68 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await expect(tiles).toHaveCount(4);
     await expect(zone).toHaveCount(0);
   });
+
+  test('the Adversary picker narrows by Tier, type and name, and a feature that summons another Adversary adds it', async () => {
+    async function createTiered(name: string, tier: string, type: string, feature?: [string, string]) {
+      await win.click('.create-panel__toggle');
+      await win.click('.chip:text-is("Adversary")');
+      await win.fill('.create-form input[type="text"]', name);
+      await win.fill('.text-field:has-text("Tier") input', tier);
+      await win.fill('.text-field:has-text("HP") input', '4');
+      await win.fill('.text-field:has-text("Stress") input', '2');
+      if (feature) {
+        await win.click('.feature-editor__add:has-text("actions")');
+        await win.locator('.feature-editor__row input[placeholder="Name"]').first().fill(feature[0]);
+        await win.locator('.feature-editor__row').first().locator('textarea').first().fill(feature[1]);
+      }
+      await win.locator('.create-form select').first().selectOption(type);
+      await win.click('button:has-text("Create Adversary")');
+      await win.click('.app-shell__brand');
+    }
+    await createTiered('Bladed Sentry', '1', 'STANDARD');
+    await createTiered('Sentry Hound', '1', 'SKULK');
+    await createTiered('Petty Baron', '2', 'SOCIAL', [
+      'Guards, Seize Them!',
+      'Once per scene, mark a Stress to summon two Bladed Sentrys, who appear at Far range. Even a sentry hound would help.',
+    ]);
+    await createCampaignAndOpenSession('The Wildwood', 'Session 1');
+
+    await win.click('.combat-panel__pull-button:has-text("+ Add Adversary")');
+    const options = win.locator('.item-picker__option');
+    const mine = options.filter({ hasText: /Bladed Sentry|Sentry Hound|Petty Baron/ });
+    await expect(mine).toHaveCount(3);
+    await expect(options.filter({ hasText: 'Petty Baron' })).toContainText('Tier 2 · Social');
+
+    // Typed: a name, a type, a Tier, or several at once.
+    const search = win.locator('.item-picker__search');
+    await search.fill('sentry');
+    await expect(options).toHaveText([/Bladed Sentry/, /Sentry Hound/]);
+    await search.fill('sentry skulk');
+    await expect(options).toHaveText([/Sentry Hound/]);
+    await search.fill('tier 2 baron');
+    await expect(options).toHaveText([/Petty Baron/]);
+    await search.fill('t1 sentry');
+    await expect(options).toHaveCount(2);
+    await search.fill('');
+
+    // Picked: the Tier buttons and the type list.
+    await win.getByRole('group', { name: 'Tier' }).getByRole('button', { name: 'Tier 2' }).click();
+    await expect(mine).toHaveText([/Petty Baron/]);
+    await win.getByRole('group', { name: 'Tier' }).getByRole('button', { name: 'Tier 2' }).click();
+    await win.locator('.item-picker__type').selectOption('Skulk');
+    await expect(mine).toHaveText([/Sentry Hound/]);
+    await win.locator('.item-picker__type').selectOption('');
+
+    await options.filter({ hasText: 'Petty Baron' }).click();
+    const tiles = win.locator('.combat-panel .content-card');
+    await expect(tiles).toHaveCount(1);
+
+    // Its feature names another stat block (and, in lower case, only uses
+    // the words of a third), so it offers exactly the one, twice over.
+    const add = tiles.first().locator('.adversary-refs__add');
+    await expect(add).toHaveText(['+ 2 × Bladed Sentry']);
+    await add.click();
+    await expect(tiles).toHaveCount(3);
+    await expect(win.locator('.combat-panel .session-tile__name-suffix')).toHaveText(['#1', '#2']);
+  });
 });

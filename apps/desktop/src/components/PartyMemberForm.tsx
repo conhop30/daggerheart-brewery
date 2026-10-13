@@ -7,6 +7,8 @@ import type { Ancestry } from '../api/ancestries';
 import type { Community } from '../api/communities';
 import ChipSelect from './ChipSelect';
 import ImageUploadField from './ImageUploadField';
+import ImageFocusField from './ImageFocusField';
+import type { ImageFocus } from './MemberBackdrop';
 import TextField from './TextField';
 import TextAreaField from './TextAreaField';
 import './forms.css';
@@ -42,9 +44,12 @@ export default function PartyMemberForm({ campaignId, sessionId, initial, option
   const [secondClassId, setSecondClassId] = useState(initial?.secondClassId ?? '');
   const [secondSubclassId, setSecondSubclassId] = useState(initial?.secondSubclassId ?? '');
   const [ancestryId, setAncestryId] = useState(initial?.ancestryId ?? '');
+  const [mixedAncestry, setMixedAncestry] = useState(Boolean(initial?.secondAncestryId));
+  const [secondAncestryId, setSecondAncestryId] = useState(initial?.secondAncestryId ?? '');
   const [communityId, setCommunityId] = useState(initial?.communityId ?? '');
   const [notes, setNotes] = useState(initial?.notes ?? '');
   const [portraitImage, setPortraitImage] = useState<string | null>(initial?.portraitImage ?? null);
+  const [portraitFocus, setPortraitFocus] = useState<ImageFocus | null>(initial?.portraitFocus ?? null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,11 +75,13 @@ export default function PartyMemberForm({ campaignId, sessionId, initial, option
       name,
       notes,
       portraitImage,
+      portraitFocus: portraitImage ? portraitFocus : null,
       classId: classId || null,
       subclassId: subclassId || null,
       secondClassId: (multiclass && secondClassId) || null,
       secondSubclassId: (multiclass && secondSubclassId) || null,
       ancestryId: ancestryId || null,
+      secondAncestryId: (mixedAncestry && secondAncestryId !== ancestryId && secondAncestryId) || null,
       communityId: communityId || null,
     };
     try {
@@ -124,6 +131,25 @@ export default function PartyMemberForm({ campaignId, sessionId, initial, option
       )}
 
       <ChipSelect label="Ancestry" options={byName(options.ancestries)} value={ancestryId} onChange={setAncestryId} />
+      {mixedAncestry ? (
+        <>
+          <ChipSelect
+            label="Second Ancestry"
+            // The same Ancestry twice isn't a mix.
+            options={byName(options.ancestries).filter((a) => a.id !== ancestryId)}
+            value={secondAncestryId}
+            onChange={setSecondAncestryId}
+            emptyHint="Add another Ancestry to mix with."
+          />
+          <button type="button" className="create-form__link" onClick={() => setMixedAncestry(false)}>
+            Remove mixed ancestry
+          </button>
+        </>
+      ) : (
+        <button type="button" className="create-form__link" onClick={() => setMixedAncestry(true)}>
+          + Mixed Ancestry
+        </button>
+      )}
       <ChipSelect label="Community" options={byName(options.communities)} value={communityId} onChange={setCommunityId} />
 
       <TextAreaField label="Notes" value={notes} onChange={setNotes} />
@@ -131,9 +157,13 @@ export default function PartyMemberForm({ campaignId, sessionId, initial, option
         label="Portrait"
         hint="Optional. Their tile uses their Subclass's background on its own; a portrait here replaces it."
         value={portraitImage}
-        onChange={setPortraitImage}
+        onChange={(image) => {
+          setPortraitImage(image);
+          setPortraitFocus(null);
+        }}
         aspectRatio="0.75"
       />
+      {portraitImage && <ImageFocusField image={portraitImage} value={portraitFocus} onChange={setPortraitFocus} />}
       {error && <p className="create-form__error">{error}</p>}
       <div className="create-form__actions">
         <button type="button" onClick={onCancel} className="create-form__cancel">

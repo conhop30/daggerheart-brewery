@@ -1238,6 +1238,30 @@ describe('Combat', () => {
       'ancestryId does not match'
     );
     await expect(store.updatePartyMember(fenn.id, { subclassId: 'missing' })).rejects.toThrow('subclassId does not match');
+
+    // A mixed Ancestry is a second one beside the first.
+    const orc = await store.createAncestry({ name: 'Orc', gameSetId: gs.id });
+    expect(plain.secondAncestryId).toBeNull();
+    const mixed = await store.updatePartyMember(fenn.id, { ancestryId: elf.id, secondAncestryId: orc.id });
+    expect(mixed).toMatchObject({ ancestryId: elf.id, secondAncestryId: orc.id });
+    expect((await store.updatePartyMember(fenn.id, { ancestryId: elf.id, secondAncestryId: elf.id })).secondAncestryId).toBeNull();
+    await expect(store.updatePartyMember(fenn.id, { secondAncestryId: 'missing' })).rejects.toThrow('secondAncestryId does not match');
+  });
+
+  it('a picture keeps which part of it to show, clamped to the picture', async () => {
+    const gs = await store.createGameSet({ name: 'Core' });
+    const d1 = await store.createDomain({ name: 'Grace', gameSetId: gs.id });
+    const d2 = await store.createDomain({ name: 'Codex', gameSetId: gs.id });
+    const bard = await store.createHeroClass({ name: 'Minstrel', primaryDomainId: d1.id, secondaryDomainId: d2.id, gameSetId: gs.id });
+    const sub = await store.createSubclass({ name: 'Troubadour', parentClassId: bard.id, gameSetId: gs.id });
+    expect(store.listSubclasses()[0].backdropFocus).toBeNull();
+    expect((await store.updateSubclass(sub.id, { backdropFocus: { x: 52.4, y: 17 } })).backdropFocus).toEqual({ x: 52, y: 17 });
+    expect((await store.updateSubclass(sub.id, { backdropFocus: { x: -20, y: 400 } })).backdropFocus).toEqual({ x: 0, y: 100 });
+    expect((await store.updateSubclass(sub.id, { backdropFocus: null })).backdropFocus).toBeNull();
+
+    const c = await store.createCampaign({ name: 'Framing' });
+    const member = await store.createPartyMember({ campaignId: c.id, name: 'Mira', portraitFocus: { x: 50, y: 10 } });
+    expect(member.portraitFocus).toEqual({ x: 50, y: 10 });
   });
 
   it('a Subclass holds an optional Party background image, defaulting to none', async () => {

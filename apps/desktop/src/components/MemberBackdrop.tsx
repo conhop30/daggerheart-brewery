@@ -1,9 +1,19 @@
 import { useEffect, useState } from 'react';
 import './MemberBackdrop.css';
 
+/** Which part of a picture stays in view when it's cropped: percentages across and down it, as in CSS background-position. */
+export interface ImageFocus {
+  x: number;
+  y: number;
+}
+
+const positionOf = (focus: ImageFocus | null | undefined) => (focus ? `${focus.x}% ${focus.y}%` : undefined);
+
 /** One Class's worth of background: its Subclass's picture, over the colours of that Class's two Domains. */
 export interface BackdropLayer {
   image: string | null;
+  /** The part of the image to keep in view. Omitted or null, its middle. */
+  focus?: ImageFocus | null;
   /** Shown wherever the image isn't: none uploaded, still loading, or failed to load. */
   colors: string[];
 }
@@ -33,7 +43,10 @@ export default function MemberBackdrop({ layers }: MemberBackdropProps) {
             key={i}
             className="member-backdrop__half"
             // A picture that fails to load simply leaves the colours showing.
-            style={{ backgroundImage: [layer.image && `url(${layer.image})`, colorFill(layer.colors)].filter(Boolean).join(', ') }}
+            style={{
+              backgroundImage: [layer.image && `url(${layer.image})`, colorFill(layer.colors)].filter(Boolean).join(', '),
+              backgroundPosition: positionOf(layer.focus),
+            }}
           />
         ))}
         <div className="member-backdrop__scrim" />
@@ -71,7 +84,7 @@ function SingleBackdrop({ layer }: { layer: BackdropLayer }) {
 
   return (
     <div className={`member-backdrop member-backdrop--${orientation ?? 'landscape'}`} style={fill ? { backgroundImage: fill } : undefined} aria-hidden="true">
-      {image && orientation && <div className="member-backdrop__image" style={{ backgroundImage: `url(${image})` }} />}
+      {image && orientation && <div className="member-backdrop__image" style={{ backgroundImage: `url(${image})`, backgroundPosition: positionOf(layer.focus) }} />}
       <div className="member-backdrop__scrim" />
     </div>
   );

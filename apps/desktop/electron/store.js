@@ -402,7 +402,12 @@ function updateHeroClass(id, patch) {
 
 // backdropImage (the themed background a Party member of this Subclass
 // gets on their tile) arrived after Subclasses existed.
-const presentSubclass = (record) => ({ ...record, backdropImage: record.backdropImage ?? null });
+// backdropFocus (which part of that picture to keep in view) came later still.
+const presentSubclass = (record) => ({
+  ...record,
+  backdropImage: record.backdropImage ?? null,
+  backdropFocus: record.backdropFocus ?? null,
+});
 
 function listSubclasses() {
   return getCache().subclasses.map(presentSubclass);
@@ -439,6 +444,7 @@ function createSubclass(data) {
       throw new Error(`No hero class with id ${data.parentClassId}`);
     }
     validateImageDataUrl(data, 'backdropImage');
+    validateImageFocus(data, 'backdropFocus');
     const record = {
       id: randomUUID(),
       name: data.name,
@@ -449,6 +455,7 @@ function createSubclass(data) {
       specializationFeatures: data.specializationFeatures ?? [],
       masteryFeatures: data.masteryFeatures ?? [],
       backdropImage: data.backdropImage ?? null,
+      backdropFocus: data.backdropFocus ?? null,
       gameSetId: data.gameSetId,
     };
     store.subclasses.push(record);
@@ -464,6 +471,7 @@ function updateSubclass(id, patch) {
       throw new Error(`No hero class with id ${patch.parentClassId}`);
     }
     validateImageDataUrl(patch, 'backdropImage');
+    validateImageFocus(patch, 'backdropFocus');
     const merged = mergePatch(existing, patch);
     // Same parentClassId scoping as createSubclass above, applied to the
     // rename-collision check too — pre-filtered to siblings under the same
@@ -1073,6 +1081,18 @@ function validateImageDataUrl(data, field, { maxBytes = MAX_IMAGE_BYTES } = {}) 
   }
 }
 
+// Which part of a picture stays in view where it's shown cropped (a Party
+// member's tile): { x, y } as percentages across and down it, the same
+// meaning as CSS background-position. null is "the middle".
+function validateImageFocus(data, field) {
+  if (data[field] === undefined || data[field] === null) return;
+  const percent = (value) => {
+    const n = Math.round(Number(value));
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+  };
+  data[field] = { x: percent(data[field].x), y: percent(data[field].y) };
+}
+
 function clampThresholds(data, field = 'thresholds', { min = 0 } = {}) {
   if (data[field] === undefined || data[field] === null) return;
   clampNumber(data[field], 'major', { min });
@@ -1304,7 +1324,7 @@ function removeJournalEntry(id) {
 // ---- Party Members ----
 // A standing roster per Campaign, carried across its Sessions: who each PC
 // is (name, Class and Subclass — two of each for a multiclassed PC —
-// Ancestry and Community), not a tracker for what they've marked. A roster
+// Ancestry, or two for a mixed one, and Community), not a tracker for what they've marked. A roster
 // from before this had a freeform `trackables` list (HP, Stress and the
 // like); that's no longer accepted, and is left off whatever is read back.
 //
@@ -1318,6 +1338,7 @@ const PARTY_MEMBER_REFS = [
   ['secondClassId', 'heroClasses'],
   ['secondSubclassId', 'subclasses'],
   ['ancestryId', 'ancestries'],
+  ['secondAncestryId', 'ancestries'],
   ['communityId', 'communities'],
 ];
 
@@ -1326,6 +1347,7 @@ const partyMembers = makeVersionedCollection('partyMembers', {
   validate: (store, data) => {
     delete data.trackables;
     validateImageDataUrl(data, 'portraitImage');
+    validateImageFocus(data, 'portraitFocus');
     for (const [field, collection] of PARTY_MEMBER_REFS) {
       if (data[field] != null && !store[collection].some((r) => r.id === data[field])) {
         throw new Error(`${field} does not match anything in ${collection}`);
@@ -1338,6 +1360,8 @@ const partyMembers = makeVersionedCollection('partyMembers', {
     if (data.secondSubclassId != null) {
       data.secondClassId = store.subclasses.find((s) => s.id === data.secondSubclassId).parentClassId;
     }
+    // A mixed Ancestry is two different ones; the same one twice is just that one.
+    if (data.secondAncestryId != null && data.secondAncestryId === data.ancestryId) data.secondAncestryId = null;
   },
   context(store, data) {
     if (!store.campaigns.some((c) => c.id === data.campaignId)) {
@@ -1353,11 +1377,13 @@ const partyMembers = makeVersionedCollection('partyMembers', {
     name: data.name,
     notes: data.notes ?? null,
     portraitImage: data.portraitImage ?? null,
+    portraitFocus: data.portraitFocus ?? null,
     classId: data.classId ?? null,
     subclassId: data.subclassId ?? null,
     secondClassId: data.secondClassId ?? null,
     secondSubclassId: data.secondSubclassId ?? null,
     ancestryId: data.ancestryId ?? null,
+    secondAncestryId: data.secondAncestryId ?? null,
     communityId: data.communityId ?? null,
   }),
   // Same read-time default as Campaign's coverImage, for members created
@@ -1365,11 +1391,13 @@ const partyMembers = makeVersionedCollection('partyMembers', {
   present: ({ trackables: _trackables, ...record }) => ({
     ...record,
     portraitImage: record.portraitImage ?? null,
+    portraitFocus: record.portraitFocus ?? null,
     classId: record.classId ?? null,
     subclassId: record.subclassId ?? null,
     secondClassId: record.secondClassId ?? null,
     secondSubclassId: record.secondSubclassId ?? null,
     ancestryId: record.ancestryId ?? null,
+    secondAncestryId: record.secondAncestryId ?? null,
     communityId: record.communityId ?? null,
   }),
 });

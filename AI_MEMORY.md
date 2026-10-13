@@ -292,6 +292,27 @@ stat block is the drag handle; see `CombatPanel.boardCell` for the two
 non-obvious parts (cancelling a drag that starts in an input, and ending a
 drag whose `dragend` never arrives).
 
+Four requests from 2026-10-11, built 2026-10-12 (not yet released). A
+Party member has `secondAncestryId` (a mixed Ancestry; the tile reads
+"Elf-Orc"). `Subclass.backdropFocus` and `PartyMember.portraitFocus` are
+`{ x, y }` percentages used as CSS `background-position` by
+`MemberBackdrop`; `ImageFocusField` is the drag-to-frame preview, and on a
+Subclass it frames the folder picture too, not only an uploaded one.
+Automatic face detection was looked at and not built: Electron has no
+detector without bundling a model, and the pictures are paintings.
+`ItemPicker` takes an optional `describe` (Tier + type) that turns on its
+filters; Loot Tables don't pass it. `lib/adversaryRefs.ts` finds the
+Adversaries a feature's text names. It is case-sensitive on the full name
+on purpose (the books capitalise a stat block's name and write "merchant"
+or "bear" in lower case for the plain word), takes the longest name, and
+treats a short form of the owner's own name ("the Vampire" on Head
+Vampire) as the owner unless it is plural or counted. `CombatPanel`
+provides `CombatRefsContext`; `AdversaryRefButtons` renders the buttons in
+Adversary and Environment tiles. Against the live library it finds every
+summon whose target exists by its full name; it cannot find ones the book
+abbreviates ("as many Lackeys as there are PCs") or that aren't in the
+library ("Storm Giant").
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

@@ -76,3 +76,56 @@
   font-size: 0.68rem;
   white-space: nowrap;
 }
+
+/* Tier and type, for the pickers whose items have them (see `describe`). */
+.item-picker__filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 6px 0;
+}
+
+.item-picker__tiers {
+  display: flex;
+  gap: 4px;
+}
+
+.item-picker__tier {
+  background: var(--void);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  padding: 0.15rem 0.6rem;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.item-picker__tier:hover {
+  border-color: var(--hope);
+}
+
+.item-picker__tier--chosen {
+  background: rgba(228, 179, 65, 0.18);
+  border-color: var(--hope);
+  color: var(--hope);
+  font-weight: 600;
+}
+
+.item-picker__type {
+  background: var(--void);
+  border: 1px solid var(--hairline);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  padding: 0.2rem 0.4rem;
+}
+
+.item-picker__filters + .item-picker__list {
+  border-top: 1px solid var(--hairline);
+  max-height: 220px;
+}

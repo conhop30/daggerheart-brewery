@@ -254,13 +254,16 @@ content above, as opposed to authoring it. Delivered in three phases:
 - **Phase 1 — Campaigns & Party (done).** A Campaign gallery (same
   banner-grid pattern as Domains) holding a standing Party roster per
   Campaign. A Party member is a name, a Class and Subclass (two of each
-  when multiclassed) and a Heritage (Ancestry + Community), all picked from
-  the app's own content as labelled chips. (They began as a name plus
+  when multiclassed) and a Heritage (Ancestry, or two for a mixed one, +
+  Community), all picked from the app's own content as labelled chips. (They began as a name plus
   freeform HP/Stress "trackables"; a real session showed the GM never
   tracks player HP, so v1.8.0 removed them.) A member's tile is backed by
   their Subclass: an image uploaded on the Subclass, else a picture named
   after it in the install's own `subclass-backdrops` folder (never shipped
-  with the app), else a gradient of the Class's two Domain colours. The
+  with the app), else a gradient of the Class's two Domain colours. A tile
+  is wide and short, so it crops most of a picture away; a **Framing**
+  preview on the Subclass (and on a member's own portrait) is dragged to
+  choose the part that shows, stored as a focus point. The
   Campaign page puts Sessions and the Party in two columns under bold ruled
   headings; the Sessions list shows seven and scrolls. Deleting a Campaign cascades
   to delete its Party — the one deliberate exception to the rest of the
@@ -275,7 +278,8 @@ content above, as opposed to authoring it. Delivered in three phases:
   60 — the highest sum reachable by that rarity's larger d12 pool), with
   uniqueness enforced per rarity. A shared `ItemPicker` (searchable across
   every Game Set, not a flat dropdown) selects which item an entry points
-  to. The actual roll math (`rollD12Pool`/`sumPool`/`resolveTableRoll`) is
+  to. The Combat panel's pickers use the same component with Tier and type
+  filters switched on, and its search box reads those too ("t2 bruiser"). The actual roll math (`rollD12Pool`/`sumPool`/`resolveTableRoll`) is
   pure, dependency-free functions with an injectable RNG, so the dice logic
   itself is unit-tested deterministically rather than through the UI.
 - **Phase 3 — Live Sessions (done).** Fear tracking (0–12, a clickable pip
@@ -587,6 +591,10 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       carry forward, a Fear rail, a two-column Campaign page, Party members
       as Class/Subclass/Heritage with Domain-coloured tiles, and the app's
       own confirm dialog and scrollbars
+- [x] Mixed Ancestry on a Party member, draggable framing for tile art,
+      Adversary search by Tier, type and name, and a button on any feature
+      that summons another Adversary (`lib/adversaryRefs.ts` recognises the
+      capitalised name; dice such as "1d4" are rolled for the count)
 - [x] Minion stacks: a Minion pulls in as one counted tile; drag single
       Minions or whole stacks to split them, merge them, or mix different
       Minions into one group

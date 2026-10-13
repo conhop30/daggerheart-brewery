@@ -4,6 +4,7 @@ import type { FeatureSections } from '../lib/featureKinds';
 import { featureRowsFor } from '../lib/featureKinds';
 import { ContentCard, EditableMetaField, FeatureRowLines, MetaChip, StringLines } from './ContentCard';
 import TextAreaField from './TextAreaField';
+import AdversaryRefButtons from './AdversaryRefButtons';
 import './SessionTile.css';
 
 interface SessionEnvironmentTileProps {
@@ -51,7 +52,13 @@ export default function SessionEnvironmentTile({ environment, masterFeatures, on
           >
             {featuresOpen ? '▾' : '▸'} Features
           </button>
-          {featuresOpen && <FeatureRowLines label={null} rows={featureRows} />}
+          {featuresOpen && (
+            <FeatureRowLines
+              label={null}
+              rows={featureRows}
+              renderExtra={(row) => <AdversaryRefButtons text={row.description} ownerName={environment.name} />}
+            />
+          )}
         </div>
       )}
     </ContentCard>

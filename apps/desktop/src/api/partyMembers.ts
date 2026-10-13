@@ -1,4 +1,5 @@
 import { apiClient, type SessionContext } from './client';
+import type { ImageFocus } from '../components/MemberBackdrop';
 
 export interface PartyMember {
   id: string;
@@ -12,9 +13,13 @@ export interface PartyMember {
   secondSubclassId: string | null;
   /** Heritage is the pair: Ancestry + Community. */
   ancestryId: string | null;
+  /** The other half of a mixed Ancestry. */
+  secondAncestryId: string | null;
   communityId: string | null;
   /** Optional portrait for the member's tile, as a data: URL — wins over their Subclass backdrop(s) when set. A tall image centers and fades on both sides; a wide one fills the tile. */
   portraitImage: string | null;
+  /** Which part of the portrait to keep in view on the tile. null is the middle. */
+  portraitFocus: ImageFocus | null;
   /** True when this member was last changed in an earlier session than the one being viewed. */
   carried?: boolean;
 }
@@ -26,11 +31,13 @@ export interface CreatePartyMemberRequest {
   name: string;
   notes?: string;
   portraitImage?: string | null;
+  portraitFocus?: ImageFocus | null;
   classId?: string | null;
   subclassId?: string | null;
   secondClassId?: string | null;
   secondSubclassId?: string | null;
   ancestryId?: string | null;
+  secondAncestryId?: string | null;
   communityId?: string | null;
 }
 
@@ -39,11 +46,13 @@ export interface UpdatePartyMemberRequest {
   name?: string;
   notes?: string;
   portraitImage?: string | null;
+  portraitFocus?: ImageFocus | null;
   classId?: string | null;
   subclassId?: string | null;
   secondClassId?: string | null;
   secondSubclassId?: string | null;
   ancestryId?: string | null;
+  secondAncestryId?: string | null;
   communityId?: string | null;
 }
 

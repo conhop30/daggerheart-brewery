@@ -181,7 +181,16 @@ export function FeatureLines({ label, features }: { label?: string; features: Na
 // differently from a Passive) and reading three run-together lists is
 // slower than reading three short ones. Pass `label={null}` when a caller
 // supplies its own heading (e.g. a collapsible toggle) instead of this one.
-export function FeatureRowLines({ label = 'Features', rows }: { label?: string | null; rows: FeatureRow[] }) {
+export function FeatureRowLines({
+  label = 'Features',
+  rows,
+  renderExtra,
+}: {
+  label?: string | null;
+  rows: FeatureRow[];
+  /** Anything to show under one feature's text, e.g. the Combat panel's "add this Adversary" buttons. */
+  renderExtra?: (row: FeatureRow) => ReactNode;
+}) {
   if (!rows || rows.length === 0) return null;
   const groups = groupFeatureRows(rows);
   return (
@@ -195,6 +204,7 @@ export function FeatureRowLines({ label = 'Features', rows }: { label?: string |
               <li key={i}>
                 <strong>{f.name}</strong>
                 {f.description ? `: ${f.description}` : ''}
+                {renderExtra?.(f)}
               </li>
             ))}
           </ul>

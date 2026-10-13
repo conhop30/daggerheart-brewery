@@ -270,4 +270,96 @@ test.describe('Campaigns & Party', () => {
     await expect(win.locator('.party-roster__member', { hasText: 'Fenn' }).locator('.member-backdrop--landscape')).toBeVisible();
     await expect(win.locator('.party-roster__member', { hasText: 'Fenn' }).locator('.member-backdrop--portrait')).toHaveCount(0);
   });
+
+  test('a Party member can have a mixed Ancestry: two of them, shown together', async () => {
+    // A new store has no Ancestries of its own.
+    await win.click('.app-shell__nav-link:has-text("Heritage")');
+    for (const name of ['Elf', 'Orc', 'Dwarf']) {
+      await win.click('button:has-text("+ New Ancestry")');
+      await win.fill('.create-form .text-field:has-text("Name") input', name);
+      await win.click('button:has-text("Create Ancestry")');
+      await expect(win.locator('.create-form')).toHaveCount(0);
+    }
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'The Wildwood');
+    await win.click('button:has-text("Create Campaign")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+
+    await win.click('.party-roster__add');
+    await win.fill('.create-form input[type="text"]', 'Fenn');
+    const ancestryChips = win.getByRole('group', { name: 'Ancestry', exact: true }).locator('.chip-select__chip');
+    const first = (await ancestryChips.first().innerText()).trim();
+    await ancestryChips.first().click();
+
+    await win.click('.create-form__link:has-text("+ Mixed Ancestry")');
+    const secondChips = win.getByRole('group', { name: 'Second Ancestry', exact: true }).locator('.chip-select__chip');
+    // The one already chosen isn't offered again.
+    await expect(secondChips.filter({ hasText: new RegExp(`^${first}$`) })).toHaveCount(0);
+    const second = (await secondChips.first().innerText()).trim();
+    await secondChips.first().click();
+    await win.click('button:has-text("Add Party Member")');
+
+    const heritage = win.locator('.content-card', { hasText: 'Fenn' }).locator('.party-roster__heritage');
+    await expect(heritage).toHaveText(`${first}-${second}`);
+
+    await win.reload();
+    await win.waitForSelector('text=Daggerheart Brewery', { timeout: 15000 });
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await expect(heritage).toHaveText(`${first}-${second}`);
+
+    // Editing shows both, and removing the mix leaves the first.
+    await win.locator('.content-card', { hasText: 'Fenn' }).getByRole('button', { name: 'Edit' }).click();
+    await expect(win.getByRole('group', { name: 'Second Ancestry', exact: true }).locator('.chip-select__chip--chosen')).toHaveText(second);
+    await win.click('.create-form__link:has-text("Remove mixed ancestry")');
+    await win.click('button:has-text("Save Changes")');
+    await expect(heritage).toHaveText(first);
+  });
+
+  test("a portrait's framing can be dragged, and the tile shows the chosen part", async () => {
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'The Wildwood');
+    await win.click('button:has-text("Create Campaign")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+
+    await win.click('.party-roster__add');
+    await win.fill('.create-form input[type="text"]', 'Fenn');
+    await expect(win.locator('.image-focus-field')).toHaveCount(0);
+    await win.setInputFiles('.create-form .image-upload-field input[type="file"]', path.join(imageDir, 'landscape.png'));
+
+    // A wide picture in a wider preview overhangs top and bottom only, so
+    // it can be moved up and down. Dragging down pulls the top into view.
+    const preview = win.locator('.image-focus-field__preview');
+    await expect(preview.locator('.member-backdrop__image')).toBeVisible();
+    await expect(preview).toHaveAttribute('data-focus', '50,50');
+    await preview.scrollIntoViewIfNeeded();
+    const box = (await preview.boundingBox())!;
+    await win.mouse.move(box.x + box.width / 2, box.y + 10);
+    await win.mouse.down();
+    await win.mouse.move(box.x + box.width / 2 + 40, box.y + 110, { steps: 5 });
+    await win.mouse.up();
+    await expect(preview).toHaveAttribute('data-focus', '50,0');
+
+    // The arrow keys nudge it.
+    await preview.focus();
+    await win.keyboard.press('ArrowDown');
+    await win.keyboard.press('ArrowDown');
+    await expect(preview).toHaveAttribute('data-focus', '50,10');
+    await win.click('button:has-text("Add Party Member")');
+
+    const tileImage = win.locator('.party-roster__member', { hasText: 'Fenn' }).locator('.member-backdrop__image');
+    await expect(tileImage).toHaveCSS('background-position', '50% 10%');
+
+    await win.reload();
+    await win.waitForSelector('text=Daggerheart Brewery', { timeout: 15000 });
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await expect(tileImage).toHaveCSS('background-position', '50% 10%');
+
+    await win.locator('.content-card', { hasText: 'Fenn' }).getByRole('button', { name: 'Edit' }).click();
+    await win.click('.image-focus-field__reset');
+    await win.click('button:has-text("Save Changes")');
+    await expect(tileImage).toHaveCSS('background-position', '50% 50%');
+  });
 });

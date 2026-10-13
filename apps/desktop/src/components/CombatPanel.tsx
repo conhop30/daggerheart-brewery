@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type DragEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent, type ReactNode } from 'react';
 import { adversariesApi } from '../api/adversaries';
 import { environmentsApi } from '../api/environments';
 import type { SessionAdversary, UpdateSessionAdversaryRequest } from '../api/sessionAdversaries';
@@ -6,6 +6,10 @@ import { sessionEnvironmentsApi, type SessionEnvironment, type UpdateSessionEnvi
 import { useApiList } from '../lib/useApiList';
 import { isMinion, toBoardCells, type MoveAmount, type MoveTarget } from '../lib/minionGroups';
 import ItemPicker from './ItemPicker';
+import { CombatRefsContext, type CombatRefs } from './AdversaryRefButtons';
+import type { AdversaryRef } from '../lib/adversaryRefs';
+import { parseDamageNotation, rollDamage } from '../lib/dice';
+import { titleCaseEnum } from '../lib/format';
 import SessionAdversaryTile from './SessionAdversaryTile';
 import SessionAdversaryStackTile from './SessionAdversaryStackTile';
 import SessionEnvironmentTile from './SessionEnvironmentTile';
@@ -375,6 +379,34 @@ export default function CombatPanel({
     onPullInAdversary(adversaryId, quantity, activeCombatId, asStack);
   }
 
+  // A feature's "+ Bladed Guard" button (see AdversaryRefButtons). Where the
+  // book gives dice for how many arrive, they're rolled here and the roll
+  // goes in the log like any other.
+  const onPullInRef = useRef(onPullInAdversary);
+  onPullInRef.current = onPullInAdversary;
+  const onRollRef = useRef(onRoll);
+  onRollRef.current = onRoll;
+  const combatRefs = useMemo<CombatRefs>(
+    () => ({
+      adversaries: adversaries.items,
+      onAdd: (ref: AdversaryRef, ownerName: string) => {
+        let quantity = 1;
+        if (typeof ref.quantity === 'number') quantity = ref.quantity;
+        else {
+          const dice = parseDamageNotation(ref.quantity);
+          if (dice) {
+            quantity = rollDamage(dice).total;
+            onRollRef.current(`${ownerName}: ${ref.quantity} ${ref.name}`, quantity);
+          }
+        }
+        quantity = Math.max(1, Math.min(MAX_ADD_QUANTITY, quantity));
+        const asStack = adversaries.items.find((a) => a.id === ref.adversaryId)?.type === 'MINION';
+        onPullInRef.current(ref.adversaryId, quantity, activeCombatId, asStack);
+      },
+    }),
+    [adversaries.items, activeCombatId]
+  );
+
   async function pullInEnvironment(environmentId: string) {
     setPickerOpen(null);
     try {
@@ -435,6 +467,7 @@ export default function CombatPanel({
         <div className="combat-panel__picker">
           <ItemPicker
             items={adversaries.items}
+            describe={(a) => ({ tier: a.tier, type: a.type ? titleCaseEnum(a.type) : null })}
             value={null}
             onChange={pullInAdversary}
             quantity={{ value: addQuantity, onChange: setAddQuantity, max: MAX_ADD_QUANTITY }}
@@ -443,7 +476,12 @@ export default function CombatPanel({
       )}
       {pickerOpen === 'environment' && (
         <div className="combat-panel__picker">
-          <ItemPicker items={environments.items} value={null} onChange={pullInEnvironment} />
+          <ItemPicker
+            items={environments.items}
+            describe={(e) => ({ tier: e.tier, type: e.category ? titleCaseEnum(e.category) : null })}
+            value={null}
+            onChange={pullInEnvironment}
+          />
         </div>
       )}
 
@@ -456,6 +494,7 @@ export default function CombatPanel({
         <p className="combat-panel__status">Nothing pulled in yet — use the buttons above to bring in a fight.</p>
       )}
 
+      <CombatRefsContext.Provider value={combatRefs}>
       <div className="combat-panel__grid">
         {toBoardCells(sessionAdversaries).map((cell) => {
           if (cell.kind === 'stack') {
@@ -535,6 +574,7 @@ export default function CombatPanel({
           />
         ))}
       </div>
+      </CombatRefsContext.Provider>
 
       {ghost && (
         <div

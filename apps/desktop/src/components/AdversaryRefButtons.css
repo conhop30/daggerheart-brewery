@@ -1,0 +1,26 @@
+.adversary-refs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+
+.adversary-refs__add {
+  background: none;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--hope);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  padding: 0.12rem 0.6rem;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease);
+}
+
+.adversary-refs__add:hover {
+  border-color: var(--hope);
+  background: rgba(228, 179, 65, 0.1);
+}

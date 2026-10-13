@@ -1,5 +1,6 @@
 import { apiClient } from './client';
 import type { Feature } from './heroClasses';
+import type { ImageFocus } from '../components/MemberBackdrop';
 
 // null on a Subclass/FoundationFeature means "not yet chosen"; NONE means
 // "actually has no spellcast trait."
@@ -30,6 +31,8 @@ export interface Subclass {
   masteryFeatures: Feature[];
   /** A themed background, as a data: URL, shown behind any Party member of this Subclass — see PartyRoster. */
   backdropImage: string | null;
+  /** Which part of the background to keep in view on a tile. Applies to the picture from this install's own folder too. null is the middle. */
+  backdropFocus: ImageFocus | null;
   gameSetId: string;
 }
 
@@ -42,6 +45,7 @@ export interface CreateSubclassRequest {
   specializationFeatures?: Feature[];
   masteryFeatures?: Feature[];
   backdropImage?: string | null;
+  backdropFocus?: ImageFocus | null;
   gameSetId: string;
 }
 
@@ -56,6 +60,7 @@ export interface UpdateSubclassRequest {
   specializationFeatures?: Feature[];
   masteryFeatures?: Feature[];
   backdropImage?: string | null;
+  backdropFocus?: ImageFocus | null;
   gameSetId?: string;
 }
 

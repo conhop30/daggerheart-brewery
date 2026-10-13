@@ -167,9 +167,11 @@ export default function PartyRoster({ campaignId, sessionId, onChange, layout = 
                         [nameOf(classes.items, classId), nameOf(subclasses.items, subclassId)].filter(Boolean).join(' · ')
                       )
                       .filter(Boolean);
-                    const heritage = [nameOf(ancestries.items, member.ancestryId), nameOf(communities.items, member.communityId)]
+                    // A mixed Ancestry reads "Elf-Orc".
+                    const ancestry = [nameOf(ancestries.items, member.ancestryId), nameOf(ancestries.items, member.secondAncestryId)]
                       .filter(Boolean)
-                      .join(' ');
+                      .join('-');
+                    const heritage = [ancestry, nameOf(communities.items, member.communityId)].filter(Boolean).join(' ');
                     // Chosen for them, not by them: the background of the
                     // Subclass they play, or both halves when multiclassed.
                     // Only their own portrait, if one was added, overrides it.
@@ -185,11 +187,11 @@ export default function PartyRoster({ campaignId, sessionId, onChange, layout = 
                         // One uploaded on the Subclass itself wins over the
                         // picture in this install's own folder for that name.
                         const image = subclass ? (subclass.backdropImage ?? subclassBackdropUrl(subclass.name) ?? null) : null;
-                        return { image, colors: domainColorsOf(classId) };
+                        return { image, focus: subclass?.backdropFocus, colors: domainColorsOf(classId) };
                       })
                       .filter((layer) => layer.image || layer.colors.length > 0);
                     const backdrop = member.portraitImage
-                      ? [{ image: member.portraitImage, colors: classLayers[0]?.colors ?? [] }]
+                      ? [{ image: member.portraitImage, focus: member.portraitFocus, colors: classLayers[0]?.colors ?? [] }]
                       : classLayers;
                     return (
                       <div className={`party-roster__member${backdrop.length ? ' party-roster__member--photo' : ''}`}>

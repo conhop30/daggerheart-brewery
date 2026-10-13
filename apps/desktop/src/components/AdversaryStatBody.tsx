@@ -6,6 +6,7 @@ import { featureRowsFor } from '../lib/featureKinds';
 import { parseDamageNotation, rollDamage, damageNotationLabel, rollDie, type DamageRollResult } from '../lib/dice';
 import { FeatureRowLines } from './ContentCard';
 import NumberInput from './NumberInput';
+import AdversaryRefButtons from './AdversaryRefButtons';
 
 // The parts of a pulled-in Adversary's stat block that are the same for
 // every copy of it — its attack and the rolls off it, Experiences, and
@@ -122,7 +123,13 @@ export default function AdversaryStatBody({
           <button type="button" className="session-tile__features-toggle" onClick={onToggleFeatures} aria-expanded={featuresOpen}>
             {featuresOpen ? '▾' : '▸'} Features
           </button>
-          {featuresOpen && <FeatureRowLines label={null} rows={featureRows} />}
+          {featuresOpen && (
+            <FeatureRowLines
+              label={null}
+              rows={featureRows}
+              renderExtra={(row) => <AdversaryRefButtons text={row.description} ownerName={adversary.name} />}
+            />
+          )}
         </div>
       )}
     </>

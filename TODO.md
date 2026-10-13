@@ -11,24 +11,14 @@ as of commit `d1a8669`.
 
 ## Open
 
-Asked for by Connor on 2026-10-11, not started:
-
-- [ ] **Mixed Ancestry: pick two ancestries.** When a Player chooses a
-      mixed ancestry they can't select the two ancestries it is made of.
-      That needs to be an option.
-- [ ] **Art framing: show the figure's face, not the torso.** The "Call
-      of the Slayer" image is cropped to the torso. Either detect where
-      the main figure is and frame on it automatically, or let the user
-      set the framing in the app. Connor said the in-app adjustment alone
-      would be enough.
-- [ ] **Combat builder: search adversaries.** Find an adversary by tier,
-      type and name.
-- [ ] **Stat block features that bring in another adversary.** Work out
-      when a feature refers to another adversary's stat block (a summon,
-      say) and show a button on it that adds that adversary to the combat
-      builder. Connor asked whether this can be recognised reliably, so
-      answer that first.
-
+- [ ] **Stat-block links, what's left.** The four requests of 2026-10-11
+      are built (mixed Ancestry, art framing, Adversary search, a button
+      on features that summon another Adversary). Not covered: a summon
+      the book abbreviates ("as many Lackeys as there are PCs"), counts
+      that depend on the table ("equal to the number of PCs" adds one),
+      and an Environment's Potential Adversaries list, which could get the
+      same buttons. Automatic face detection for art was not built; the
+      framing is set by hand.
 - [ ] **Advanced format, loose ends.** Pictures in `frame-images` are
       never cleaned up when no frame uses them, and don't travel with
       Export Data. Text does not flow between pages while typing (Fit to

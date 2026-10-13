@@ -11,6 +11,9 @@ import FeatureListEditor from './FeatureListEditor';
 import FoundationFeatureListEditor from './FoundationFeatureListEditor';
 import GameSetSelect from './GameSetSelect';
 import ImageUploadField from './ImageUploadField';
+import ImageFocusField from './ImageFocusField';
+import type { ImageFocus } from './MemberBackdrop';
+import { useSubclassBackdrops } from '../lib/subclassBackdrops';
 import TextField from './TextField';
 import SelectField from './SelectField';
 import './forms.css';
@@ -57,6 +60,11 @@ export default function SubclassForm({
   const [masteryFeatures, setMasteryFeatures] = useState<Feature[]>(initial?.masteryFeatures ?? []);
   const [gameSetId, setGameSetId] = useState<string>(initial?.gameSetId ?? '');
   const [backdropImage, setBackdropImage] = useState<string | null>(initial?.backdropImage ?? null);
+  const [backdropFocus, setBackdropFocus] = useState<ImageFocus | null>(initial?.backdropFocus ?? null);
+  // What a tile actually shows: the picture uploaded here, or failing that
+  // the one in this install's folder under the Subclass's name.
+  const folderBackdrop = useSubclassBackdrops()(name);
+  const shownBackdrop = backdropImage ?? folderBackdrop ?? null;
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +85,7 @@ export default function SubclassForm({
       specializationFeatures,
       masteryFeatures,
       backdropImage,
+      backdropFocus: shownBackdrop ? backdropFocus : null,
       gameSetId,
     };
     try {
@@ -119,9 +128,13 @@ export default function SubclassForm({
         label="Party Background"
         hint="Shown behind any Party member of this Subclass on the Campaign page. Optional: a picture named after this Subclass in your subclass-backdrops folder is used automatically, and anything else falls back to its Class's Domain colours. A tall image centers and fades on both sides; a wide one fills the tile."
         value={backdropImage}
-        onChange={setBackdropImage}
+        onChange={(image) => {
+          setBackdropImage(image);
+          setBackdropFocus(null);
+        }}
         aspectRatio="2.2"
       />
+      {shownBackdrop && <ImageFocusField image={shownBackdrop} value={backdropFocus} onChange={setBackdropFocus} />}
       <GameSetSelect value={gameSetId} onChange={setGameSetId} />
       {error && <p className="create-form__error">{error}</p>}
       <div className="create-form__actions">
