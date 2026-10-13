@@ -313,7 +313,7 @@ summon whose target exists by its full name; it cannot find ones the book
 abbreviates ("as many Lackeys as there are PCs") or that aren't in the
 library ("Storm Giant").
 
-Built 2026-10-12, after v1.8.4 (not yet released). Session music is a
+Released as v1.8.5 on 2026-10-12. Session music is a
 playlist now, not one looped default: `lib/music.resolvePlaylist` gives
 the chosen region's own tracks, default track first, falling back to
 Everywhere's when the region is empty. Before, a region with tracks but no
