@@ -190,9 +190,53 @@ const ENVIRONMENT_COLUMNS: StatGalleryColumn<Environment>[] = [
   { key: 'type', label: 'Type', render: (e) => (e.category ? titleCaseEnum(e.category) : '—') },
 ];
 
+type SectionKey = 'adversaries' | 'environments';
+const COLLAPSED_KEY = 'daggerheart.adversariesEnvironments.collapsed';
+
+// Which of the page's two sections are folded away. Remembered, so a GM who
+// only ever wants Environments doesn't fold Adversaries on every visit.
+function useCollapsedSections() {
+  const [collapsed, setCollapsed] = useState<Record<SectionKey, boolean>>(() => {
+    try {
+      return { adversaries: false, environments: false, ...JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? '{}') };
+    } catch {
+      return { adversaries: false, environments: false };
+    }
+  });
+  function toggle(key: SectionKey) {
+    setCollapsed((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem(COLLAPSED_KEY, JSON.stringify(next));
+      } catch {
+        // Not remembered this time; it still folds.
+      }
+      return next;
+    });
+  }
+  return { collapsed, toggle };
+}
+
+// A section's heading, which is also the button that folds it. With several
+// hundred Adversaries above them, the Environments were a long scroll away.
+function SectionTitle({ title, count, collapsed, onToggle }: { title: string; count: number; collapsed: boolean; onToggle: () => void }) {
+  return (
+    <h2 className="browse-page__section-title">
+      <button type="button" className="browse-page__section-toggle" aria-expanded={!collapsed} onClick={onToggle}>
+        <span className="browse-page__section-caret" aria-hidden="true">
+          {collapsed ? '▸' : '▾'}
+        </span>
+        {title}
+        <span className="browse-page__section-count">{count}</span>
+      </button>
+    </h2>
+  );
+}
+
 export default function AdversariesEnvironmentsPage() {
-  const adversaries = useApiList(adversariesApi.list);
-  const environments = useApiList(environmentsApi.list);
+  const { collapsed, toggle } = useCollapsedSections();
+  const adversaries = useApiList(adversariesApi.list, 'adversaries');
+  const environments = useApiList(environmentsApi.list, 'environments');
   const [creatingAdversary, setCreatingAdversary] = useState(false);
   const [creatingEnvironment, setCreatingEnvironment] = useState(false);
 
@@ -205,7 +249,12 @@ export default function AdversariesEnvironmentsPage() {
 
       <div className="browse-page__section">
         <div className="browse-page__section-header">
-          <h2 className="browse-page__section-title">Adversaries</h2>
+          <SectionTitle
+            title="Adversaries"
+            count={adversaries.items.length}
+            collapsed={collapsed.adversaries}
+            onToggle={() => toggle('adversaries')}
+          />
           <button type="button" className="browse-page__add-button" onClick={() => setCreatingAdversary(true)}>
             + New Adversary
           </button>
@@ -223,7 +272,7 @@ export default function AdversariesEnvironmentsPage() {
         )}
         {adversaries.loading && <p className="browse-page__status">Loading Adversaries&hellip;</p>}
         {adversaries.error && <p className="browse-page__status browse-page__status--error">{adversaries.error}</p>}
-        {!adversaries.loading && !adversaries.error && (
+        {!adversaries.loading && !adversaries.error && !collapsed.adversaries && (
           <StatGallery
             items={adversaries.items}
             getKey={(a) => a.id}
@@ -257,7 +306,12 @@ export default function AdversariesEnvironmentsPage() {
 
       <div className="browse-page__section">
         <div className="browse-page__section-header">
-          <h2 className="browse-page__section-title">Environments</h2>
+          <SectionTitle
+            title="Environments"
+            count={environments.items.length}
+            collapsed={collapsed.environments}
+            onToggle={() => toggle('environments')}
+          />
           <button type="button" className="browse-page__add-button" onClick={() => setCreatingEnvironment(true)}>
             + New Environment
           </button>
@@ -277,7 +331,7 @@ export default function AdversariesEnvironmentsPage() {
         {environments.error && (
           <p className="browse-page__status browse-page__status--error">{environments.error}</p>
         )}
-        {!environments.loading && !environments.error && (
+        {!environments.loading && !environments.error && !collapsed.environments && (
           <StatGallery
             items={environments.items}
             getKey={(e) => e.id}

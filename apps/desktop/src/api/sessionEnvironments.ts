@@ -16,6 +16,8 @@ export interface SessionEnvironment {
   description: string | null;
   impulses: string[];
   notes: string | null;
+  /** Shown full-width above the board, in as little height as it can take. */
+  pinned: boolean;
   /** True when this was pulled in (or last changed) in an earlier session than the one being viewed. */
   carried?: boolean;
 }
@@ -34,6 +36,7 @@ export interface UpdateSessionEnvironmentRequest {
   combatId?: string;
   label?: string;
   notes?: string;
+  pinned?: boolean;
   /** Adjusted independently of the master Environment once pulled in — see SessionEnvironmentTile. */
   difficulty?: number | null;
 }

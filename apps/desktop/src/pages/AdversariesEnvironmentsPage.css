@@ -47,3 +47,33 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* A section heading that folds its section. Looks like the heading it is. */
+.browse-page__section-toggle {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.browse-page__section-toggle:hover {
+  color: var(--hope);
+}
+
+.browse-page__section-caret {
+  font-size: 0.8em;
+  color: var(--muted);
+  width: 0.9em;
+}
+
+.browse-page__section-count {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}

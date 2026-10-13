@@ -328,8 +328,8 @@ export default function CombatPanel({
     };
   }, [spotlightSignal]);
 
-  const adversaries = useApiList(adversariesApi.list);
-  const environments = useApiList(environmentsApi.list);
+  const adversaries = useApiList(adversariesApi.list, 'adversaries');
+  const environments = useApiList(environmentsApi.list, 'environments');
 
   useEffect(() => {
     let cancelled = false;
@@ -438,6 +438,8 @@ export default function CombatPanel({
   const duplicateSuffixes = computeDuplicateSuffixes(sessionAdversaries);
   const ghost = dragGhost();
   const visibleEnvironments = sessionEnvironments.filter((e) => e.combatId === activeCombatId);
+  const pinnedEnvironments = visibleEnvironments.filter((e) => e.pinned);
+  const boardEnvironments = visibleEnvironments.filter((e) => !e.pinned);
 
   return (
     <div className="combat-panel">
@@ -495,6 +497,21 @@ export default function CombatPanel({
       )}
 
       <CombatRefsContext.Provider value={combatRefs}>
+      {/* A pinned Environment is the one thing that isn't a column of the
+          board: it runs the full width above it, as short as it can be. */}
+      {pinnedEnvironments.length > 0 && (
+        <div className="combat-panel__pinned">
+          {pinnedEnvironments.map((environment) => (
+            <SessionEnvironmentTile
+              key={environment.id}
+              environment={environment}
+              masterFeatures={environments.items.find((e) => e.id === environment.environmentId)?.features}
+              onChange={(patch) => handleEnvironmentChange(environment, patch)}
+              onRemove={() => handleEnvironmentRemove(environment)}
+            />
+          ))}
+        </div>
+      )}
       <div className="combat-panel__grid">
         {toBoardCells(sessionAdversaries).map((cell) => {
           if (cell.kind === 'stack') {
@@ -564,7 +581,7 @@ export default function CombatPanel({
             </div>
           );
         })}
-        {visibleEnvironments.map((environment) => (
+        {boardEnvironments.map((environment) => (
           <SessionEnvironmentTile
             key={environment.id}
             environment={environment}

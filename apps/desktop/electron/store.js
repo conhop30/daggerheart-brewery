@@ -1708,6 +1708,7 @@ function validateSessionEnvironment(store, data) {
     throw new Error(`No combat with id ${data.combatId}`);
   }
   clampNumber(data, 'difficulty', { min: 0 });
+  if (data.pinned !== undefined) data.pinned = Boolean(data.pinned);
 }
 
 const sessionEnvironments = makeVersionedCollection('sessionEnvironments', {
@@ -1715,7 +1716,8 @@ const sessionEnvironments = makeVersionedCollection('sessionEnvironments', {
   validate: validateSessionEnvironment,
   // combatId predates this collection's other fields too — same
   // treatment as presentSessionAdversary's, see its comment.
-  present: (record) => ({ ...record, combatId: record.combatId ?? null }),
+  // pinned (shown full-width above the board) came later.
+  present: (record) => ({ ...record, combatId: record.combatId ?? null, pinned: record.pinned ?? false }),
   build(store, data, { campaignId, sessionId }) {
     const environment = store.environments.find((e) => e.id === data.environmentId);
     if (!environment) throw new Error(`No environment with id ${data.environmentId}`);
@@ -1732,6 +1734,7 @@ const sessionEnvironments = makeVersionedCollection('sessionEnvironments', {
       description: environment.description,
       impulses: environment.impulses,
       notes: data.notes ?? null,
+      pinned: data.pinned ?? false,
     };
   },
 });
@@ -1801,23 +1804,33 @@ const combats = makeVersionedCollection('combats', {
 
 // ---- Note tabs ----
 // The tabs of a Session's Notes section: a name, an order, and the text.
+// A tab can sit inside another (parentId), one level deep: "Cephilith" can
+// hold "Titan" and "Priests" beside its own text.
 // Versioned exactly like Combat tabs, so they carry forward the same way —
 // a tab written in session 1 is there in session 2 with its text, and
 // editing it in session 2 leaves session 1's copy as it was. (The older
 // per-Session note, a SESSION-kind Journal entry, is a separate thing that
 // still lives in the Journal bubble; see SessionNotesPanel for how its text
 // seeds a Campaign's first tab.)
-function validateNoteTab(_store, data) {
+function validateNoteTab(store, data) {
   if (data.name !== undefined) {
     const trimmed = String(data.name).trim();
     data.name = trimmed || undefined;
   }
   if (data.notes !== undefined) data.notes = String(data.notes ?? '');
+  // A tab inside another tab. One level only: a tab that is itself inside
+  // one can't hold more.
+  if (data.parentId != null) {
+    const parent = store.noteTabs.find((t) => (t.lineageId ?? t.id) === data.parentId);
+    if (!parent) throw new Error(`No note tab with id ${data.parentId}`);
+    if (parent.parentId != null) throw new Error('A tab inside another tab cannot hold tabs of its own');
+  }
 }
 
 const noteTabs = makeVersionedCollection('noteTabs', {
   context: sessionContext,
   validate: validateNoteTab,
+  present: (record) => ({ ...record, parentId: record.parentId ?? null }),
   build(_store, data, { campaignId, sessionId }) {
     if (data.order === undefined) throw new Error('order is required');
     return {
@@ -1827,6 +1840,7 @@ const noteTabs = makeVersionedCollection('noteTabs', {
       name: data.name && data.name.trim() ? data.name.trim() : 'Notes',
       order: Math.round(Number(data.order)) || 0,
       notes: data.notes ?? '',
+      parentId: data.parentId ?? null,
     };
   },
 });

@@ -1444,4 +1444,116 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await expect(tiles).toHaveCount(3);
     await expect(win.locator('.combat-panel .session-tile__name-suffix')).toHaveText(['#1', '#2']);
   });
+
+  test('an Environment made while a Session is open can be pulled in, pinned across the top, and folded', async () => {
+    await createCampaignAndOpenSession('The Wildwood', 'Session 1');
+    await win.click('.combat-panel__pull-button:has-text("+ Add Environment")');
+    await expect(win.locator('.item-picker__option', { hasText: 'Sunken Chapel' })).toHaveCount(0);
+
+    // Made on another page, with the Session still open behind it.
+    await win.click('.app-shell__nav-link:has-text("Adversaries")');
+    await win.click('button:has-text("+ New Environment")');
+    await win.fill('.create-form .text-field:has-text("Name") input', 'Sunken Chapel');
+    await win.locator('.create-form select').first().selectOption('EXPLORATION');
+    await win.click('.create-form .feature-editor__add:has-text("passives")');
+    await win.locator('.create-form .feature-editor__row input[placeholder="Name"]').first().fill('Flooded Nave');
+    await win.locator('.create-form .feature-editor__row').first().locator('textarea').first().fill('Movement is slowed.');
+    await win.click('button:has-text("Create Environment")');
+    await expect(win.locator('.create-form')).toHaveCount(0);
+
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await expect(win.locator('.session-view__title')).toHaveText('Session 1');
+    await win.locator('.item-picker__option:visible', { hasText: 'Sunken Chapel' }).click();
+
+    const onBoard = win.locator('.combat-panel__grid .session-environment');
+    const pinned = win.locator('.combat-panel__pinned .session-environment');
+    await expect(onBoard).toHaveCount(1);
+    await expect(onBoard).toContainText('Flooded Nave');
+
+    await onBoard.getByRole('button', { name: 'Pin to top' }).click();
+    await expect(onBoard).toHaveCount(0);
+    await expect(pinned).toHaveCount(1);
+    await expect(pinned).toHaveClass(/session-environment--pinned/);
+    // Full width: as wide as the board itself.
+    const stripWidth = (await pinned.boundingBox())!.width;
+    const panelWidth = (await win.locator('.combat-panel:visible').boundingBox())!.width;
+    expect(stripWidth).toBeGreaterThan(panelWidth - 4);
+
+    // Folded, only its heading line is left.
+    await pinned.getByRole('button', { name: 'Collapse Sunken Chapel' }).click();
+    await expect(pinned).not.toContainText('Flooded Nave');
+    await pinned.getByRole('button', { name: 'Expand Sunken Chapel' }).click();
+    await expect(pinned).toContainText('Flooded Nave');
+
+    // Pinning is saved.
+    await win.reload();
+    await win.waitForSelector('text=Daggerheart Brewery', { timeout: 15000 });
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
+    await expect(pinned).toHaveCount(1);
+    await pinned.getByRole('button', { name: 'Unpin' }).click();
+    await expect(pinned).toHaveCount(0);
+    await expect(onBoard).toHaveCount(1);
+  });
+
+  test('a Notes tab can hold tabs of its own, each with its own text, and they carry forward', async () => {
+    await createCampaignAndOpenSession('The Wildwood', 'Session 1');
+    const noteTabs = win.locator('.notes-tab-bar__tab');
+    const inner = win.locator('.notes-inner-tab-bar__tab');
+    const notes = win.locator('.session-notes-panel__notes');
+
+    await noteTabs.nth(0).dblclick();
+    await win.fill('.notes-tab-bar__rename', 'Cephilith');
+    await win.keyboard.press('Enter');
+    await notes.fill('The cult as a whole.');
+    await notes.blur();
+
+    // No inner tabs yet: just the offer to add one.
+    await expect(inner).toHaveCount(0);
+    await win.click('.notes-inner-tab-bar__add');
+    await expect(inner.locator('.notes-inner-tab-bar__label')).toHaveText(['Overview', 'Page 1']);
+    await expect(inner.nth(1)).toHaveClass(/notes-inner-tab-bar__tab--active/);
+    await expect(notes).toHaveValue('');
+    await inner.nth(1).dblclick();
+    await win.fill('.notes-inner-tab-bar__rename', 'Titan');
+    await win.keyboard.press('Enter');
+    await notes.fill('A psychic projection.');
+    await win.click('.notes-inner-tab-bar__add');
+    await notes.fill('They serve the Titan.');
+    await expect(inner.locator('.notes-inner-tab-bar__label')).toHaveText(['Overview', 'Titan', 'Page 2']);
+
+    // The outer tab's own text is the Overview, which can't be removed.
+    await inner.nth(0).click();
+    await expect(notes).toHaveValue('The cult as a whole.');
+    await expect(inner.nth(0).locator('.notes-inner-tab-bar__delete')).toHaveCount(0);
+    await inner.nth(1).click();
+    await expect(notes).toHaveValue('A psychic projection.');
+
+    // A second outer tab has no inner tabs of its own.
+    await win.click('.notes-tab-bar__add');
+    await expect(noteTabs).toHaveCount(2);
+    await expect(inner).toHaveCount(0);
+    await noteTabs.nth(0).click();
+    await expect(inner).toHaveCount(3);
+
+    // Carried into the next Session, still inside Cephilith.
+    await win.click('.session-view__back');
+    await win.click('.session-list__add');
+    await win.fill('.create-form input[type="text"]', 'Session 2');
+    await win.click('button:has-text("Start Session")');
+    await win.locator('.content-card', { hasText: 'Session 2' }).getByRole('button', { name: 'Open' }).click();
+    await expect(win.locator('.session-view__title')).toHaveText('Session 2');
+    await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Cephilith', 'Notes 2']);
+    await expect(inner.locator('.notes-inner-tab-bar__label')).toHaveText(['Overview', 'Titan', 'Page 2']);
+    await inner.nth(2).click();
+    await expect(notes).toHaveValue('They serve the Titan.');
+
+    // Deleting an inner tab leaves the rest; deleting the outer one takes them all.
+    await inner.nth(2).locator('.notes-inner-tab-bar__delete').click();
+    await expect(inner.locator('.notes-inner-tab-bar__label')).toHaveText(['Overview', 'Titan']);
+    await noteTabs.nth(0).locator('.notes-tab-bar__delete').click();
+    await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Notes 2']);
+    await expect(inner).toHaveCount(0);
+  });
 });

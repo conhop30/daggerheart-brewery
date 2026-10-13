@@ -376,6 +376,31 @@ test.describe('Electron app', () => {
     await expect(win.locator('.stat-gallery').first().locator('.stat-gallery__table')).toBeVisible();
   });
 
+  test('the Adversaries and Environments sections each fold away, and stay folded', async () => {
+    await win.click('.app-shell__nav-link:has-text("Adversaries")');
+    await win.click('button:has-text("+ New Environment")');
+    await win.fill('.create-form .text-field:has-text("Name") input', 'Raging River');
+    await win.click('button:has-text("Create Environment")');
+    await expect(win.locator('.create-form')).toHaveCount(0);
+
+    const environments = win.locator('.browse-page__section:visible', { hasText: 'Environments' }).last();
+    const toggle = environments.locator('.browse-page__section-toggle');
+    await expect(toggle).toContainText('1');
+    await expect(environments.locator('.stat-gallery')).toBeVisible();
+    await toggle.click();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(environments.locator('.stat-gallery')).toHaveCount(0);
+    // Still there to add to.
+    await expect(environments.locator('button:has-text("+ New Environment")')).toBeVisible();
+
+    await win.reload();
+    await win.waitForSelector('text=Daggerheart Brewery', { timeout: 15000 });
+    await win.click('.app-shell__nav-link:has-text("Adversaries")');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+    await expect(environments.locator('.stat-gallery')).toBeVisible();
+  });
+
   test('Environments open as a table of Name, Tier, Difficulty and Type', async () => {
     await win.click('.app-shell__nav-link:has-text("Adversaries")');
     await win.click('button:has-text("+ New Environment")');

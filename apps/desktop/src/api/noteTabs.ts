@@ -11,6 +11,8 @@ export interface NoteTab {
   name: string;
   order: number;
   notes: string;
+  /** The tab this one sits inside, or null for a tab on the top row. */
+  parentId: string | null;
   /** True when this tab was last changed in an earlier session than the one being viewed. */
   carried?: boolean;
 }
@@ -20,6 +22,7 @@ export interface CreateNoteTabRequest {
   name: string;
   order: number;
   notes?: string;
+  parentId?: string | null;
 }
 
 export interface UpdateNoteTabRequest {

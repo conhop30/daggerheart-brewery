@@ -21,6 +21,8 @@ interface SessionNotesPanelProps {
 
 /** The stand-in id of the one tab shown before anything has been saved — see `tabs` below. */
 const UNSAVED = '__unsaved__';
+/** What a tab's own text is called once it has tabs inside it. */
+const OWN_PAGE = 'Overview';
 
 interface NotesTab extends Tab {
   saved: NoteTab | null;
@@ -41,10 +43,17 @@ const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().t
 // SESSION-kind Journal entry named after it, still reachable from the
 // Journal bubble), that unsaved tab starts out holding its text, so those
 // notes aren't stranded.
+//
+// A tab can hold tabs of its own, one level down: "Cephilith" with "Titan"
+// and "Priests" inside it. They show as a second, smaller bar under the
+// first, led by "Overview", which is the outer tab's own text. Inner tabs
+// are ordinary note tabs with a parentId, so they carry forward too.
 export default function SessionNotesPanel({ campaignId, session, tabSignal }: SessionNotesPanelProps) {
   const [saved, setSaved] = useState<NoteTab[]>([]);
   const [legacyNotes, setLegacyNotes] = useState('');
   const [activeId, setActiveId] = useState<string>(UNSAVED);
+  // Which inner tab is open, per outer tab. Missing means its Overview.
+  const [activeInner, setActiveInner] = useState<Record<string, string>>({});
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
   const ctx = { sessionId: session.id };
@@ -63,7 +72,8 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
         const sorted = [...list].sort((a, b) => a.order - b.order);
         setSaved(sorted);
         setLegacyNotes(journal.find((e) => e.kind === 'SESSION' && e.label.trim() === session.name.trim())?.notes ?? '');
-        setActiveId((prev) => (sorted.some((t) => t.id === prev) ? prev : sorted[0]?.id ?? UNSAVED));
+        const outer = sorted.filter((t) => t.parentId == null);
+        setActiveId((prev) => (outer.some((t) => t.id === prev) ? prev : outer[0]?.id ?? UNSAVED));
       })
       .catch((err) => alertDialog(err instanceof Error ? err.message : 'Could not load this session’s Notes.'))
       .finally(() => {
@@ -74,19 +84,28 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
     };
   }, [campaignId, session.id, session.name]);
 
-  const tabs: NotesTab[] = saved.length
-    ? saved.map((tab) => ({ id: tab.id, name: tab.name, saved: tab }))
+  const outerSaved = saved.filter((t) => t.parentId == null);
+  const tabs: NotesTab[] = outerSaved.length
+    ? outerSaved.map((tab) => ({ id: tab.id, name: tab.name, saved: tab }))
     : [{ id: UNSAVED, name: 'Notes', saved: null }];
   const active = tabs.find((t) => t.id === activeId) ?? tabs[0];
+
+  // The tabs inside the active one, and which of them (or the outer tab's
+  // own text) the textarea is showing: `page`.
+  const innerSaved = active.saved ? saved.filter((t) => t.parentId === active.saved!.id) : [];
+  const innerTabs: NotesTab[] = innerSaved.length
+    ? [{ id: active.id, name: OWN_PAGE, saved: active.saved, fixed: true }, ...innerSaved.map((tab) => ({ id: tab.id, name: tab.name, saved: tab }))]
+    : [];
+  const page = innerTabs.find((t) => t.id === activeInner[active.id]) ?? active;
 
   // The textarea shows a draft of the active tab, reloaded whenever a
   // different tab becomes active (or the active one's saved text changes
   // underneath it). Saving happens on blur, which a click on another tab
   // causes first, so switching tabs never drops what was just typed.
-  const activeNotes = active.saved ? active.saved.notes : legacyNotes;
+  const activeNotes = page.saved ? page.saved.notes : legacyNotes;
   useEffect(() => {
     setDraft(activeNotes);
-  }, [active.id, activeNotes]);
+  }, [page.id, activeNotes]);
 
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
@@ -114,6 +133,51 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
     return created;
   }
 
+  async function addInner() {
+    try {
+      const parent = active.saved ?? (await saveFirstTab({}));
+      const siblings = saved.filter((t) => t.parentId === parent.id);
+      const created = await noteTabsApi.create({
+        sessionId: session.id,
+        name: `Page ${siblings.length + 1}`,
+        order: siblings.length,
+        parentId: parent.id,
+      });
+      setSaved((prev) => [...prev, created]);
+      setActiveInner((prev) => ({ ...prev, [parent.id]: created.id }));
+    } catch (err) {
+      fail(err, 'Could not create that tab.');
+    }
+  }
+
+  async function removeInner(tab: NotesTab) {
+    if (!tab.saved || tab.fixed) return;
+    if (!(await confirmDialog(`Delete "${tab.name}"? Its notes can't be recovered.`))) return;
+    try {
+      await noteTabsApi.remove(tab.saved.id, ctx);
+      setSaved((prev) => prev.filter((t) => t.id !== tab.saved!.id));
+    } catch (err) {
+      fail(err, 'Could not delete that tab.');
+    }
+  }
+
+  async function reorderInner(next: NotesTab[]) {
+    const reordered = next.flatMap((t) => (t.saved && !t.fixed ? [t.saved] : []));
+    const orderOf = new Map(reordered.map((t, i) => [t.id, i]));
+    setSaved((prev) =>
+      prev
+        .map((t) => (orderOf.has(t.id) ? { ...t, order: orderOf.get(t.id)! } : t))
+        .sort((a, b) => a.order - b.order)
+    );
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].order !== i) await noteTabsApi.update(reordered[i].id, { order: i }, ctx);
+      }
+    } catch (err) {
+      fail(err, 'Could not save that reorder.');
+    }
+  }
+
   async function patch(tab: NoteTab, fields: { name?: string; notes?: string; order?: number }) {
     setSaved((prev) => prev.map((t) => (t.id === tab.id ? { ...t, ...fields } : t)));
     await noteTabsApi.update(tab.id, fields, ctx);
@@ -121,8 +185,8 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
 
   async function commitNotes() {
     try {
-      if (active.saved) {
-        if (draft !== active.saved.notes) await patch(active.saved, { notes: draft });
+      if (page.saved) {
+        if (draft !== page.saved.notes) await patch(page.saved, { notes: draft });
       } else if (draft.trim()) {
         await saveFirstTab({ notes: draft });
       }
@@ -142,7 +206,7 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
 
   async function add() {
     try {
-      const existing = saved.length ? saved : [await saveFirstTab({})];
+      const existing = outerSaved.length ? outerSaved : [await saveFirstTab({})];
       const created = await noteTabsApi.create({
         sessionId: session.id,
         name: `Notes ${existing.length + 1}`,
@@ -158,12 +222,18 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
   async function remove(tab: NotesTab) {
     // Nothing saved, nothing to delete.
     if (!tab.saved) return;
-    if (!(await confirmDialog(`Delete "${tab.name}"? Its notes can't be recovered.`))) return;
+    const inside = saved.filter((t) => t.parentId === tab.saved!.id);
+    const warning = inside.length
+      ? `Delete "${tab.name}" and the ${inside.length === 1 ? 'tab' : `${inside.length} tabs`} inside it? Their notes can't be recovered.`
+      : `Delete "${tab.name}"? Its notes can't be recovered.`;
+    if (!(await confirmDialog(warning))) return;
     try {
+      // What's inside goes first, so nothing is left pointing at a tab that's gone.
+      for (const inner of inside) await noteTabsApi.remove(inner.id, ctx);
       await noteTabsApi.remove(tab.saved.id, ctx);
-      const next = saved.filter((t) => t.id !== tab.saved!.id);
+      const next = saved.filter((t) => t.id !== tab.saved!.id && t.parentId !== tab.saved!.id);
       setSaved(next);
-      if (activeId === tab.id) setActiveId(next[0]?.id ?? UNSAVED);
+      if (activeId === tab.id) setActiveId(next.find((t) => t.parentId == null)?.id ?? UNSAVED);
     } catch (err) {
       fail(err, 'Could not delete that tab.');
     }
@@ -173,7 +243,7 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
   // the order the writes are issued in.
   async function reorder(next: NotesTab[]) {
     const reordered = next.flatMap((t) => (t.saved ? [t.saved] : []));
-    setSaved(reordered.map((t, i) => ({ ...t, order: i })));
+    setSaved((prev) => [...reordered.map((t, i) => ({ ...t, order: i })), ...prev.filter((t) => t.parentId != null)]);
     try {
       for (let i = 0; i < reordered.length; i++) {
         if (reordered[i].order !== i) await noteTabsApi.update(reordered[i].id, { order: i }, ctx);
@@ -198,9 +268,21 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
         onAdd={add}
         onDelete={remove}
       />
+      <TabBar
+        tabs={innerTabs}
+        activeId={page.id}
+        noun={`${active.name} inner`}
+        hook="notes-inner-tab-bar"
+        addLabel={innerTabs.length ? '+' : `+ Tab inside ${active.name}`}
+        onSelect={(id) => setActiveInner((prev) => ({ ...prev, [active.id]: id }))}
+        onReorder={reorderInner}
+        onRename={rename}
+        onAdd={addInner}
+        onDelete={removeInner}
+      />
       <textarea
         className="session-notes-panel__notes"
-        placeholder={`Notes for ${active.name}…`}
+        placeholder={`Notes for ${page === active ? active.name : `${active.name} / ${page.name}`}…`}
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onBlur={commitNotes}

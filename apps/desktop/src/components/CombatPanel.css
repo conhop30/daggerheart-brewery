@@ -214,3 +214,18 @@
 .combat-panel__cell textarea {
   cursor: text;
 }
+
+/* Pinned Environments: full width above the board. */
+.combat-panel__pinned {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.combat-panel__pinned > .content-card {
+  border: 1px solid var(--hope);
+  border-radius: var(--radius-card);
+  background: var(--panel);
+  padding: 0 var(--space-2);
+}

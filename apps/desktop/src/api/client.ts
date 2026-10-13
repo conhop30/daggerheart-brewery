@@ -98,6 +98,16 @@ async function unwrap<T>(promise: Promise<T>): Promise<T> {
   }
 }
 
+// Pages stay mounted once visited, so a list fetched by one of them (the
+// Combat panel's Adversaries and Environments, say) goes stale when another
+// page creates or edits a record. Every write announces its collection, and
+// useApiList's `watch` option refetches on it.
+export const COLLECTION_CHANGED = 'daggerheart:collection-changed';
+
+function announceChange(collection: string) {
+  window.dispatchEvent(new CustomEvent(COLLECTION_CHANGED, { detail: collection }));
+}
+
 // Every method here is `async` on purpose, even though most bodies are a
 // single expression — that's what turns bridge()'s synchronous throw (no
 // window.daggerheart, i.e. running outside Electron) into a rejected
@@ -153,12 +163,19 @@ export const apiClient = {
   /** Copies a track's audio file + record into another region, leaving the original untouched. */
   copyMusicTrackToRegion: async <T>(trackId: string, targetRegionId: string): Promise<T> =>
     (await unwrap(bridge().copyMusicTrackToRegion(trackId, targetRegionId))) as T,
-  create: async <T>(collection: string, data: unknown): Promise<T> =>
-    (await unwrap(bridge().create(collection, data))) as T,
-  update: async <T>(collection: string, id: string, patch: unknown, ctx?: SessionContext): Promise<T> =>
-    (await unwrap(bridge().update(collection, id, patch, ctx))) as T,
+  create: async <T>(collection: string, data: unknown): Promise<T> => {
+    const created = (await unwrap(bridge().create(collection, data))) as T;
+    announceChange(collection);
+    return created;
+  },
+  update: async <T>(collection: string, id: string, patch: unknown, ctx?: SessionContext): Promise<T> => {
+    const updated = (await unwrap(bridge().update(collection, id, patch, ctx))) as T;
+    announceChange(collection);
+    return updated;
+  },
   remove: async (collection: string, id: string, ctx?: SessionContext): Promise<void> => {
     await unwrap(bridge().remove(collection, id, ctx));
+    announceChange(collection);
   },
   exportData: async () => unwrap(bridge().exportData()),
   importData: async () => unwrap(bridge().importData()),

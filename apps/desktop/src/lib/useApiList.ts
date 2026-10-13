@@ -1,12 +1,17 @@
 import { useCallback, useEffect, useState } from 'react';
 import { upsertById } from './upsert';
 import { alertDialog, confirmDialog } from './confirm';
+import { COLLECTION_CHANGED } from '../api/client';
 
 // Every browse page below needs one to four of these — same loading/error/
 // unmount-guard boilerplate each time, so it's a hook instead of copy-paste.
 // Also hands back upsert/remove so a successful edit or delete can update
 // the on-screen list immediately instead of a full refetch.
-export function useApiList<T extends { id: string }>(fetcher: () => Promise<T[]>) {
+//
+// `watch` names the collection the list comes from, for a list that isn't
+// the one being edited: it is fetched again whenever anything, anywhere in
+// the app, writes to that collection.
+export function useApiList<T extends { id: string }>(fetcher: () => Promise<T[]>, watch?: string) {
   const [items, setItems] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,6 +39,27 @@ export function useApiList<T extends { id: string }>(fetcher: () => Promise<T[]>
     // re-running this on every render would defeat the point of the hook.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!watch) return;
+    let latest = 0;
+    const refetch = (e: Event) => {
+      if ((e as CustomEvent<string>).detail !== watch) return;
+      const mine = ++latest;
+      fetcher()
+        .then((result) => {
+          if (mine === latest) setItems(result);
+        })
+        // The list already on screen stays; the next change tries again.
+        .catch(() => {});
+    };
+    window.addEventListener(COLLECTION_CHANGED, refetch);
+    return () => {
+      latest = -1;
+      window.removeEventListener(COLLECTION_CHANGED, refetch);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watch]);
 
   function upsert(item: T) {
     setItems((prev) => upsertById(prev, item));

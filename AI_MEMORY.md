@@ -313,6 +313,20 @@ summon whose target exists by its full name; it cannot find ones the book
 abbreviates ("as many Lackeys as there are PCs") or that aren't in the
 library ("Storm Giant").
 
+Built 2026-10-12 (not yet released). Pages stay mounted, so a list
+fetched once went stale when another page wrote to its collection: a
+homebrew Environment made with a Session open never reached the Combat
+panel's picker. `apiClient.create/update/remove` now dispatch
+`COLLECTION_CHANGED` and `useApiList(fetcher, 'collection')` refetches on
+it; pass the second argument for any list that some other page can change.
+`SessionEnvironment.pinned` moves a tile out of the board grid into
+`.combat-panel__pinned` (full width, features in CSS columns).
+`NoteTab.parentId` nests one level; `SessionNotesPanel` draws a second
+`TabBar` whose first, `fixed` tab ("Overview") is the outer tab's own text,
+and deletes inner tabs before their outer one. The Adversaries &
+Environments page's two section headings fold their sections
+(localStorage).
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

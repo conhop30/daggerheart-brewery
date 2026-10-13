@@ -420,3 +420,40 @@
 .session-stack__shared {
   margin-bottom: var(--space-1);
 }
+
+/* A pinned Environment: across the top of the board, laid out to be short. */
+.session-environment__impulses {
+  margin: 0 0 var(--space-1);
+  font-size: 0.85rem;
+  color: var(--ink-dim);
+}
+
+.session-environment__impulses strong {
+  color: var(--ink);
+}
+
+.session-environment--pinned .content-card__description {
+  margin-bottom: 4px;
+}
+
+/* Each kind of feature (Passives, Actions, ...) becomes a column, and long
+   ones split across columns, so the strip grows sideways before it grows down. */
+.session-environment--pinned .session-tile__features .content-card__section {
+  columns: 3 320px;
+  column-gap: var(--space-3);
+}
+
+.session-environment--pinned .content-card__feature-list li {
+  break-inside: avoid;
+  margin-bottom: 4px;
+}
+
+.session-environment--pinned .content-card__feature-group-label {
+  break-after: avoid;
+}
+
+/* One line of Notes until it's dragged taller: the field's usual three-line
+   minimum is most of this strip's height. */
+.session-environment--pinned textarea.text-field__input {
+  min-height: calc(1.4em + 1.4rem);
+}

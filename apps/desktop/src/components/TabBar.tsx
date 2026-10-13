@@ -5,6 +5,8 @@ import './TabBar.css';
 export interface Tab {
   id: string;
   name: string;
+  /** Always there, under this name, in this place: no rename, no drag, no delete. */
+  fixed?: boolean;
 }
 
 interface TabBarProps<T extends Tab> {
@@ -19,6 +21,8 @@ interface TabBarProps<T extends Tab> {
   onRename: (tab: T, name: string) => void;
   onAdd: () => void;
   onDelete: (tab: T) => void;
+  /** Overrides the "+" button's label, for a bar whose "+" needs explaining. */
+  addLabel?: string;
 }
 
 // A row of renamable, reorderable, deletable tabs with a "+" at the end —
@@ -42,6 +46,7 @@ export default function TabBar<T extends Tab>({
   onRename,
   onAdd,
   onDelete,
+  addLabel,
 }: TabBarProps<T>) {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [draft, setDraft] = useState('');
@@ -66,10 +71,10 @@ export default function TabBar<T extends Tab>({
         return (
           <div
             key={tab.id}
-            {...handleProps}
-            draggable={!renaming}
+            {...(tab.fixed ? {} : handleProps)}
+            draggable={!renaming && !tab.fixed}
             aria-label={tab.name}
-            title="Double-click to rename, drag to reorder"
+            title={tab.fixed ? undefined : 'Double-click to rename, drag to reorder'}
             // Not handleProps.className: the shared .drag-handle rules (a
             // small muted glyph) are scoped under .session-section-shell,
             // which this bar sits inside, and would outrank the tab's own
@@ -78,7 +83,7 @@ export default function TabBar<T extends Tab>({
               handleProps.className.includes('drag-handle--dragging') ? ' tab-bar__tab--dragging' : ''
             }${getRowClassName(index)}`}
             onClick={() => onSelect(tab.id)}
-            onDoubleClick={() => startRename(tab)}
+            onDoubleClick={() => !tab.fixed && startRename(tab)}
           >
             {renaming ? (
               <input
@@ -97,22 +102,24 @@ export default function TabBar<T extends Tab>({
             ) : (
               <span className={`tab-bar__label ${hook}__label`}>{tab.name}</span>
             )}
-            <button
-              type="button"
-              className={`tab-bar__delete ${hook}__delete`}
-              aria-label={`Delete ${tab.name}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(tab);
-              }}
-            >
-              &times;
-            </button>
+            {!tab.fixed && (
+              <button
+                type="button"
+                className={`tab-bar__delete ${hook}__delete`}
+                aria-label={`Delete ${tab.name}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(tab);
+                }}
+              >
+                &times;
+              </button>
+            )}
           </div>
         );
       })}
       <button type="button" className={`tab-bar__add ${hook}__add`} aria-label={`Add ${noun} tab`} onClick={onAdd}>
-        +
+        {addLabel ?? '+'}
       </button>
     </div>
   );

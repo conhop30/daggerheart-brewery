@@ -1165,6 +1165,36 @@ describe('Combat', () => {
     expect(dead.slain).toBe(true);
   });
 
+  it('a Note tab can hold tabs of its own, one level deep', async () => {
+    const c = await store.createCampaign({ name: 'The Wildwood' });
+    const first = await store.createSession({ campaignId: c.id, name: 'Session 1' });
+    const second = await store.createSession({ campaignId: c.id, name: 'Session 2' });
+    const outer = await store.createNoteTab({ sessionId: first.id, name: 'Cephilith', order: 0 });
+    expect(outer.parentId).toBeNull();
+    const inner = await store.createNoteTab({ sessionId: first.id, name: 'Titan', order: 0, parentId: outer.id, notes: 'Psychic projection.' });
+    expect(inner.parentId).toBe(outer.id);
+    await expect(store.createNoteTab({ sessionId: first.id, name: 'Deeper', order: 0, parentId: inner.id })).rejects.toThrow(
+      'cannot hold tabs of its own'
+    );
+    await expect(store.createNoteTab({ sessionId: first.id, name: 'Lost', order: 0, parentId: 'missing' })).rejects.toThrow('No note tab');
+    // Carried forward still inside the same tab.
+    expect(store.listNoteTabsBySession(second.id).map((t) => [t.name, t.parentId])).toEqual([
+      ['Cephilith', null],
+      ['Titan', outer.id],
+    ]);
+  });
+
+  it('a pulled-in Environment can be pinned', async () => {
+    const gs = await store.createGameSet({ name: 'Core' });
+    const cave = await store.createEnvironment({ name: 'Cave', gameSetId: gs.id });
+    const c = await store.createCampaign({ name: 'The Wildwood' });
+    const session = await store.createSession({ campaignId: c.id, name: 'Session 1' });
+    const pulled = await store.createSessionEnvironment({ sessionId: session.id, environmentId: cave.id });
+    expect(pulled.pinned).toBe(false);
+    expect((await store.updateSessionEnvironment(pulled.id, { pinned: true }, { sessionId: session.id })).pinned).toBe(true);
+    expect(store.listSessionEnvironmentsBySession(session.id)[0].pinned).toBe(true);
+  });
+
   it('Note tabs carry forward, and a later edit or delete leaves the earlier Session as it was', async () => {
     const c = await store.createCampaign({ name: 'The Wildwood' });
     const first = await store.createSession({ campaignId: c.id, name: 'Session 1' });

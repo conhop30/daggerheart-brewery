@@ -23,3 +23,21 @@
   outline: none;
   border-color: var(--hope);
 }
+
+/* The tabs inside the active tab: the same bar, a size down and set in from
+   the edge, so it reads as belonging to the tab above it. */
+.notes-inner-tab-bar {
+  margin-top: calc(var(--space-1) * -1);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--hairline);
+}
+
+.notes-inner-tab-bar .tab-bar__tab,
+.notes-inner-tab-bar .tab-bar__add {
+  font-size: 0.74rem;
+  padding: 0.2rem 0.45rem;
+}
+
+.notes-inner-tab-bar__tab[aria-label='Overview'] {
+  cursor: pointer;
+}

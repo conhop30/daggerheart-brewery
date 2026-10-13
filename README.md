@@ -595,6 +595,10 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       Adversary search by Tier, type and name, and a button on any feature
       that summons another Adversary (`lib/adversaryRefs.ts` recognises the
       capitalised name; dice such as "1d4" are rolled for the count)
+- [x] Environments pinned full-width above the Combat board, Notes tabs
+      that hold tabs of their own, foldable Adversaries / Environments
+      sections, and lists that refetch when another page changes their
+      collection (`useApiList`'s `watch`)
 - [x] Minion stacks: a Minion pulls in as one counted tile; drag single
       Minions or whole stacks to split them, merge them, or mix different
       Minions into one group
