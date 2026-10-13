@@ -313,6 +313,20 @@ summon whose target exists by its full name; it cannot find ones the book
 abbreviates ("as many Lackeys as there are PCs") or that aren't in the
 library ("Storm Giant").
 
+Built 2026-10-12, after v1.8.4 (not yet released). Session music is a
+playlist now, not one looped default: `lib/music.resolvePlaylist` gives
+the chosen region's own tracks, default track first, falling back to
+Everywhere's when the region is empty. Before, a region with tracks but no
+default played nothing of its own, which is what "I can't switch what's
+playing" was. `MusicContext` keeps `currentId`, `next` and `previous`
+(`backtrackTarget`: restart past 5 seconds, else the previous song); the
+`<audio>` loops only when the playlist is one song and is tagged
+`data-session-audio` (the editor's preview `<audio>` is also in the DOM).
+Position and duration live in a second context, `useMusicProgress`,
+because they change several times a second and `SessionView` consumes the
+main one. `MusicTransport` is the buttons and play bar. Tracks and regions
+rename by double-clicking the name; the Rename buttons are gone.
+
 Released as v1.8.4 on 2026-10-12, with the two paragraphs around this
 one. `campaignImages` is a hand-rolled collection (id, campaignId, name,
 fileName), not `makeCollection`, because that dedupes by name and two maps

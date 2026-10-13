@@ -123,8 +123,11 @@ test.describe('Music library and session playback', () => {
     await expect(win.locator('.track-list__track')).toHaveCount(2);
 
     const row = win.locator('.track-list__track', { hasText: 'Calm Road' });
+    // Renaming is a double-click on the name; there is no Rename button.
     await row.getByRole('button', { name: /More actions/ }).click();
-    await row.getByRole('button', { name: 'Rename' }).click();
+    await expect(row.getByRole('button', { name: 'Rename' })).toHaveCount(0);
+    await row.getByRole('button', { name: /More actions/ }).click();
+    await row.locator('.track-list__name').dblclick();
     await win.fill('input[aria-label="Track name"]', 'Golden Road');
     await win.press('input[aria-label="Track name"]', 'Enter');
     await expect(win.locator('.track-list__track', { hasText: 'Golden Road' })).toBeVisible();
@@ -175,7 +178,7 @@ test.describe('Music library and session playback', () => {
     expect(bad).toBe('error');
   });
 
-  test('a session loops the selected region\'s default track, and switching regions by hand swaps it', async () => {
+  test('a session starts on the selected region\'s default track, and switching regions by hand swaps it', async () => {
     test.setTimeout(60000); // sets up a library and a session before it gets to the assertions
     await openMusicTab();
     await pickFiles('Calm Road', 'War Drums', 'Sea Surf');
@@ -203,12 +206,13 @@ test.describe('Music library and session playback', () => {
     await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
 
     const now = win.locator('[data-testid="now-playing"]');
-    const audio = win.locator('audio');
+    const audio = win.locator('audio[data-session-audio]');
     await expect(now).toHaveText('Calm Road');
 
     // Merely opening a session never starts audio.
     expect(await audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
-    expect(await audio.evaluate((a: HTMLAudioElement) => a.loop)).toBe(true);
+    // Two songs in the folder, so it moves on at the end of one instead of looping it.
+    expect(await audio.evaluate((a: HTMLAudioElement) => a.loop)).toBe(false);
 
     await win.click('button[aria-label="Play music"]');
     await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
@@ -365,7 +369,7 @@ test.describe('Music library and session playback', () => {
     await expect(win.locator('[data-testid="now-playing"]')).toHaveText('Calm Road');
 
     await win.click('button[aria-label="Play music"]');
-    const audio = win.locator('audio[loop]');
+    const audio = win.locator('audio[data-session-audio]');
     await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
   });
 
@@ -376,7 +380,7 @@ test.describe('Music library and session playback', () => {
     await win.selectOption('select[aria-label="Default track"]', { label: 'Calm Road' });
 
     await win.click('button[aria-label="Play music"]');
-    const realAudio = win.locator('audio[loop]');
+    const realAudio = win.locator('audio[data-session-audio]');
     await expect.poll(() => realAudio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
 
     // Previewing a different track pauses real Session playback instead of
@@ -396,27 +400,114 @@ test.describe('Music library and session playback', () => {
     ).toHaveCount(0);
   });
 
-  test('editing away the currently-playing default pauses playback, and a later new default does not silently auto-resume', async () => {
+  test('removing the only song while it plays pauses playback, and music added later does not silently auto-resume', async () => {
     await openQuietSession();
     await win.click('.session-music-panel button:has-text("Manage Music")');
-    await pickFiles('Calm Road', 'War Drums');
-    await win.selectOption('select[aria-label="Default track"]', { label: 'Calm Road' });
+    await pickFiles('Calm Road');
 
     await win.click('button[aria-label="Play music"]');
-    const audio = win.locator('audio[loop]');
+    const audio = win.locator('audio[data-session-audio]');
     await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
 
-    // Clear the default that's actively playing.
-    await win.selectOption('select[aria-label="Default track"]', { label: 'None' });
+    const row = win.locator('.track-list__track', { hasText: 'Calm Road' });
+    await row.getByRole('button', { name: /More actions/ }).click();
+    await row.getByRole('button', { name: 'Remove' }).click();
     await expect(win.locator('[data-testid="now-playing"]')).toHaveText('No music set');
     await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
     await expect(win.locator('button[aria-label="Play music"]')).toBeDisabled();
 
-    // Setting a new default afterwards must NOT auto-resume on its own.
-    await win.selectOption('select[aria-label="Default track"]', { label: 'War Drums' });
+    // Something to play again must NOT start on its own.
+    await pickFiles('War Drums');
     await expect(win.locator('[data-testid="now-playing"]')).toHaveText('War Drums');
     await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(true);
     await expect(win.locator('button[aria-label="Play music"]')).toHaveText('▶ Play');
+  });
+
+  test("a region plays its own folder with no default set, and the back and skip buttons and the play bar move through it", async () => {
+    test.setTimeout(60000);
+    // Long enough to be more than five seconds into.
+    for (const name of ['Marsh Reeds', 'Marsh Frogs', 'Marsh Rain']) writeWav(path.join(audioDir, `${name}.wav`), 12);
+    await openQuietSession();
+    await win.click('.session-music-panel button:has-text("Manage Music")');
+    await pickFiles('Calm Road');
+
+    // A region of its own, with three songs and no default chosen.
+    await win.click('button:has-text("+ New Region")');
+    await win.fill('input[aria-label="New region name"]', 'The Marsh');
+    await win.click('.region-list__inline-form button:has-text("Add")');
+    await win.click('.region-list__region:has-text("The Marsh")');
+    await pickFiles('Marsh Reeds', 'Marsh Frogs', 'Marsh Rain');
+    await expect(win.locator('.track-list__track')).toHaveCount(3);
+    await expect(win.locator('select[aria-label="Default track"]')).toHaveValue('');
+
+    const now = win.locator('[data-testid="now-playing"]');
+    const audio = win.locator('audio[data-session-audio]');
+    const seek = win.locator('input[aria-label="Song position"]');
+    const time = () => audio.evaluate((a: HTMLAudioElement) => a.currentTime);
+    await expect(now).toHaveText('Calm Road');
+
+    // Choosing the region switches to its music, which can be played.
+    await win.selectOption('select[aria-label="Music region"]', { label: 'The Marsh' });
+    await expect(now).toHaveText('Marsh Reeds');
+    await win.click('button[aria-label="Play music"]');
+    await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
+    await expect(win.locator('[data-testid="music-duration"]')).toHaveText('0:12');
+
+    // Skip goes on through the folder and round again; playback carries on.
+    await win.click('button[aria-label="Next track"]');
+    await expect(now).toHaveText('Marsh Frogs');
+    await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
+    await win.click('button[aria-label="Next track"]');
+    await expect(now).toHaveText('Marsh Rain');
+    await win.click('button[aria-label="Next track"]');
+    await expect(now).toHaveText('Marsh Reeds');
+
+    // The play bar moves within the song.
+    await seek.fill('8');
+    await expect.poll(time).toBeGreaterThan(7.5);
+    await expect(win.locator('[data-testid="music-elapsed"]')).toHaveText(/0:0[89]/);
+
+    // Back, more than five seconds in: the same song, from its start.
+    await win.click('button[aria-label="Previous track"]');
+    await expect(now).toHaveText('Marsh Reeds');
+    await expect.poll(time).toBeLessThan(3);
+
+    // Back again, only just started: the song before it (the last, from the first).
+    await win.click('button[aria-label="Previous track"]');
+    await expect(now).toHaveText('Marsh Rain');
+    await win.click('button[aria-label="Previous track"]');
+    await expect(now).toHaveText('Marsh Frogs');
+
+    // A song that reaches its end hands over to the next.
+    await seek.fill('11.5');
+    await expect(now).toHaveText('Marsh Rain', { timeout: 10000 });
+    await expect.poll(() => audio.evaluate((a: HTMLAudioElement) => a.paused)).toBe(false);
+
+    // Back to a region with one song: it loops, and there is nothing to skip to.
+    await win.selectOption('select[aria-label="Music region"]', { label: 'Global' });
+    await expect(now).toHaveText('Calm Road');
+    expect(await audio.evaluate((a: HTMLAudioElement) => a.loop)).toBe(true);
+    await expect(win.locator('button[aria-label="Next track"]')).toBeDisabled();
+  });
+
+  test('a region is renamed by double-clicking its title; there is no Rename button', async () => {
+    await openMusicTab();
+    await win.click('button:has-text("+ New Region")');
+    await win.fill('input[aria-label="New region name"]', 'The Marsh');
+    await win.click('.region-list__inline-form button:has-text("Add")');
+    await win.click('.region-list__region:has-text("The Marsh")');
+
+    await expect(win.locator('.region-header button:has-text("Rename")')).toHaveCount(0);
+    await win.locator('.region-header__title').dblclick();
+    await win.fill('input[aria-label="Region name"]', 'The Fen');
+    await win.press('input[aria-label="Region name"]', 'Enter');
+    await expect(win.locator('.region-header__title')).toHaveText('The Fen');
+    await expect(win.locator('.region-list__region', { hasText: 'The Fen' })).toBeVisible();
+
+    // The built-in region keeps its name.
+    await win.click('.region-list__region:has-text("Global")');
+    await win.locator('.region-header__title').dblclick();
+    await expect(win.locator('input[aria-label="Region name"]')).toHaveCount(0);
   });
 
   test('the Music tab\'s overview grid shows track counts and each region\'s default, and "Open" jumps the selection below', async () => {

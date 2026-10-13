@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { musicApi, trackUrl, type MusicRegion, type MusicTrack } from '../api/music';
-import { resolveDefaultTrack } from '../lib/music';
+import { backtrackTarget, resolvePlaylist } from '../lib/music';
 import { loadVolume, saveVolume } from '../lib/musicVolume';
 
 export interface MusicSessionInfo {
@@ -17,7 +17,10 @@ interface MusicContextValue {
   session: MusicSessionInfo | null;
   /** The session currently mounted in SessionView, or null when nothing is open — see AppShell/SessionView. */
   viewingSessionId: string | null;
+  /** The song that is playing, or would be: one of `playlist`. */
   track: MusicTrack | null;
+  /** The chosen region's folder, in play order — see lib/music.resolvePlaylist. */
+  playlist: MusicTrack[];
   playing: boolean;
   volume: number;
   /** True once Play has been pressed for the current `session` — gates the floating player, see FloatingMusicPlayer. */
@@ -28,6 +31,10 @@ interface MusicContextValue {
   play: () => void;
   pause: () => void;
   toggle: () => void;
+  /** The next song in the playlist, round to the first after the last. */
+  next: () => void;
+  /** Restarts the song if it's more than a few seconds in; otherwise the previous song. */
+  previous: () => void;
   setVolume: (volume: number) => void;
   audioError: string | null;
   /** Re-fetches regions/tracks immediately — wired into the in-session "Manage Music" editor so an edit made mid-session (a new default, a renamed/volume-adjusted track) takes effect without leaving and re-entering the Session. */
@@ -37,6 +44,17 @@ interface MusicContextValue {
 }
 
 const MusicContext = createContext<MusicContextValue | null>(null);
+
+/** Where the current song has got to. Its own context: it changes several times a second, and only the play bar cares. */
+interface MusicProgressValue {
+  /** Seconds played. */
+  position: number;
+  /** The song's length in seconds; 0 until it's known. */
+  duration: number;
+  seek: (seconds: number) => void;
+}
+
+const MusicProgressContext = createContext<MusicProgressValue | null>(null);
 
 // Owns the one <audio> element for the whole app, mounted once here (in the
 // provider's own render tree, at the app root — see App.tsx) instead of
@@ -55,6 +73,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
   const [everPlayed, setEverPlayed] = useState(false);
   const [volume, setVolumeState] = useState(loadVolume);
   const [audioError, setAudioError] = useState<string | null>(null);
+  // Which song of the playlist is up. null (or a song no longer in the
+  // playlist) means its first.
+  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [position, setPosition] = useState(0);
+  const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement>(null);
   // Whichever music-library editor is currently mounted registers its own
   // stopPreview here — at most one is ever mounted at a time (the Music tab
@@ -90,7 +113,11 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     [allRegions, session?.campaignId]
   );
 
-  const track = session ? resolveDefaultTrack(session.regionId, regions, tracks) : null;
+  const playlist = useMemo(
+    () => (session ? resolvePlaylist(session.regionId, regions, tracks) : []),
+    [session, regions, tracks]
+  );
+  const track = playlist.find((t) => t.id === currentId) ?? playlist[0] ?? null;
 
   const setSession = useCallback((info: MusicSessionInfo) => {
     // Regions/tracks are fetched once at startup, so this is what picks up
@@ -100,6 +127,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     refreshLibrary();
     setSessionState((prev) => {
       if (prev && prev.sessionId !== info.sessionId) setEverPlayed(false);
+      // A different region starts from its own first song.
+      if (!prev || prev.sessionId !== info.sessionId || prev.regionId !== info.regionId) setCurrentId(null);
       return info;
     });
   }, [refreshLibrary]);
@@ -161,6 +190,33 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const trackIndex = track ? playlist.findIndex((t) => t.id === track.id) : -1;
+
+  const restart = useCallback(() => {
+    if (audioRef.current) audioRef.current.currentTime = 0;
+    setPosition(0);
+  }, []);
+
+  const next = useCallback(() => {
+    if (playlist.length <= 1) restart();
+    else setCurrentId(playlist[(trackIndex + 1) % playlist.length].id);
+  }, [playlist, trackIndex, restart]);
+
+  const previous = useCallback(() => {
+    const target = backtrackTarget(audioRef.current?.currentTime ?? 0, trackIndex, playlist.length);
+    if (target === 'restart') restart();
+    else setCurrentId(playlist[target].id);
+  }, [playlist, trackIndex, restart]);
+
+  const seek = useCallback((seconds: number) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(seconds)) return;
+    audio.currentTime = Math.max(0, seconds);
+    setPosition(audio.currentTime);
+  }, []);
+
+  const progress = useMemo<MusicProgressValue>(() => ({ position, duration, seek }), [position, duration, seek]);
+
   const value = useMemo<MusicContextValue>(
     () => ({
       regions,
@@ -168,6 +224,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       session,
       viewingSessionId,
       track,
+      playlist,
       playing,
       volume,
       everPlayed,
@@ -177,6 +234,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       play,
       pause,
       toggle,
+      next,
+      previous,
       setVolume: setVolumeState,
       audioError,
       refreshLibrary,
@@ -188,6 +247,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       session,
       viewingSessionId,
       track,
+      playlist,
       playing,
       volume,
       everPlayed,
@@ -196,6 +256,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       play,
       pause,
       toggle,
+      next,
+      previous,
       audioError,
       refreshLibrary,
       registerPreviewStopper,
@@ -204,11 +266,23 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 
   return (
     <MusicContext.Provider value={value}>
-      {children}
+      <MusicProgressContext.Provider value={progress}>{children}</MusicProgressContext.Provider>
       <audio
         ref={audioRef}
+        data-session-audio
         src={track ? trackUrl(track) : undefined}
-        loop
+        // A folder of one loops; a longer one moves on to its next song.
+        loop={playlist.length <= 1}
+        onEnded={next}
+        onTimeUpdate={(e) => setPosition(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => {
+          setDuration(Number.isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0);
+          setPosition(e.currentTarget.currentTime);
+        }}
+        onEmptied={() => {
+          setDuration(0);
+          setPosition(0);
+        }}
         onError={() => {
           if (track) setAudioError(`Couldn't play "${track.name}" — the audio file may be missing.`);
           setPlaying(false);
@@ -221,5 +295,12 @@ export function MusicProvider({ children }: { children: ReactNode }) {
 export function useMusicContext(): MusicContextValue {
   const ctx = useContext(MusicContext);
   if (!ctx) throw new Error('useMusicContext must be used inside <MusicProvider>.');
+  return ctx;
+}
+
+/** The current song's position and length, and seeking within it. */
+export function useMusicProgress(): MusicProgressValue {
+  const ctx = useContext(MusicProgressContext);
+  if (!ctx) throw new Error('useMusicProgress must be used inside <MusicProvider>.');
   return ctx;
 }

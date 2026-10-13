@@ -11,12 +11,15 @@ interface FloatingMusicPlayerProps {
 // — and get back — without reopening the Session through Campaigns > that
 // Campaign > that Session by hand.
 export default function FloatingMusicPlayer({ onOpenSession }: FloatingMusicPlayerProps) {
-  const { session, track, playing, volume, toggle, setVolume, viewingSessionId, everPlayed } = useMusicContext();
+  const { session, track, playing, volume, toggle, next, previous, setVolume, viewingSessionId, everPlayed } = useMusicContext();
 
   if (!session || !track || !everPlayed || viewingSessionId === session.sessionId) return null;
 
   return (
     <div className="floating-music-player" role="group" aria-label="Music (playing in the background)">
+      <button type="button" className="floating-music-player__skip" onClick={previous} aria-label="Previous track">
+        ⏮
+      </button>
       <button
         type="button"
         className="floating-music-player__play"
@@ -24,6 +27,9 @@ export default function FloatingMusicPlayer({ onOpenSession }: FloatingMusicPlay
         aria-label={playing ? 'Pause music' : 'Play music'}
       >
         {playing ? '❚❚' : '▶'}
+      </button>
+      <button type="button" className="floating-music-player__skip" onClick={next} aria-label="Next track">
+        ⏭
       </button>
       <div className="floating-music-player__info">
         <span className="floating-music-player__track">{track.name}</span>

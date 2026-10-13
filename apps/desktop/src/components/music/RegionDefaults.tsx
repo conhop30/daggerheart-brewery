@@ -8,8 +8,8 @@ interface RegionDefaultsProps {
   onSetDefault: (trackId: string) => void;
 }
 
-// The default-track picker for the selected region — what loops when a
-// Session picks this region to play from.
+// The default-track picker for the selected region: the song a Session
+// starts on when it picks this region. The rest of the folder follows it.
 export default function RegionDefaults({ region, candidates, inheritLabel, onSetDefault }: RegionDefaultsProps) {
   return (
     <div className="region-defaults">

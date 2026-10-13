@@ -62,3 +62,7 @@
   border-color: var(--fear-on-dark, #c66);
   color: var(--fear-on-dark, #c66);
 }
+
+.region-header__title--renamable {
+  cursor: text;
+}

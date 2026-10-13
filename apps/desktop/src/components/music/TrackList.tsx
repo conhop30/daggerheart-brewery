@@ -19,7 +19,7 @@ interface TrackListProps {
 }
 
 // One compact line per track (preview, name, a default-mode tag, and a
-// "⋯" menu for Rename/File in region/Remove) — deliberately not a row of
+// "⋯" menu for File in region/Remove; double-click the name to rename) — deliberately not a row of
 // always-visible inline controls, so this reads cleanly at the in-session
 // sidebar's fixed 260px as well as the full-width Music tab. Also: each row
 // is draggable (onto a region in RegionList, to copy it there) and the list
@@ -124,7 +124,9 @@ export default function TrackList({
                   }}
                 />
               ) : (
-                <span className="track-list__name">{track.name}</span>
+                <span className="track-list__name" title="Double-click to rename" onDoubleClick={() => startRename(track)}>
+                  {track.name}
+                </span>
               )}
 
               {selectedRegion.defaultTrackId === track.id && <em className="track-list__tag">DEFAULT</em>}
@@ -141,9 +143,6 @@ export default function TrackList({
                 </button>
                 {openMenuId === track.id && (
                   <div className="track-list__popover" role="menu">
-                    <button type="button" onClick={() => startRename(track)}>
-                      Rename
-                    </button>
                     <label className="track-list__popover-move">
                       File in region
                       <select

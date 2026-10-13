@@ -2,6 +2,7 @@ import { EVERYWHERE_REGION_ID } from '../api/music';
 import { useMusicContext } from '../context/MusicContext';
 import CollapsibleSection from './CollapsibleSection';
 import MusicLibraryEditor from './music/MusicLibraryEditor';
+import MusicTransport from './music/MusicTransport';
 import './SessionMusicPanel.css';
 
 interface SessionMusicPanelProps {
@@ -16,14 +17,18 @@ interface SessionMusicPanelProps {
 // the region picker, since changing it has to persist onto the Session
 // record, which SessionView (not the music context) is responsible for.
 //
-// The player block below is unchanged and always visible — "an audio
+// What plays is the chosen region's folder, song after song (see
+// lib/music.resolvePlaylist); MusicTransport is the back / play / skip row
+// and the play bar.
+//
+// The player block below is always visible — "an audio
 // player with music selectors outside of it". Editing (upload/rename/file/
 // set-default/per-track volume) lives in the collapsed-by-default "Manage
 // Music" section beneath it, so a GM can fix the music without leaving the
 // Session; refreshLibrary() is what makes an edit made there actually take
 // effect on the spot instead of waiting for the next time setSession() runs.
 export default function SessionMusicPanel({ campaignId, regionId, onRegionChange }: SessionMusicPanelProps) {
-  const { regions, track, playing, volume, toggle, setVolume, audioError, refreshLibrary } = useMusicContext();
+  const { regions, track, volume, setVolume, audioError, refreshLibrary } = useMusicContext();
 
   return (
     <div className="session-music-panel" role="group" aria-label="Music">
@@ -49,17 +54,7 @@ export default function SessionMusicPanel({ campaignId, regionId, onRegionChange
         {track ? track.name : 'No music set'}
       </span>
 
-      <div className="session-music-panel__row">
-        <button
-          type="button"
-          className="session-music-panel__play"
-          onClick={toggle}
-          disabled={!track}
-          aria-label={playing ? 'Pause music' : 'Play music'}
-        >
-          {playing ? '❚❚ Pause' : '▶ Play'}
-        </button>
-      </div>
+      <MusicTransport />
 
       <label className="session-music-panel__volume">
         Volume

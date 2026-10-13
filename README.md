@@ -595,6 +595,9 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       Adversary search by Tier, type and name, and a button on any feature
       that summons another Adversary (`lib/adversaryRefs.ts` recognises the
       capitalised name; dice such as "1d4" are rolled for the count)
+- [x] Session music as a playlist: a region plays its whole folder song
+      after song, with back and skip buttons and a seekable play bar;
+      tracks and regions rename on double-click
 - [x] **v1.8.4** — a per-Campaign image folder for maps in the Session
       sidebar, plus everything in the three entries below
 - [x] Environments pinned full-width above the Combat board, Notes tabs
