@@ -19,6 +19,10 @@ as of commit `d1a8669`.
       and an Environment's Potential Adversaries list, which could get the
       same buttons. Automatic face detection for art was not built; the
       framing is set by hand.
+- [ ] **Campaign image folder, loose ends.** Deleting a Campaign removes
+      its picture records but leaves the files in `campaign-images`.
+      Pictures don't travel with Export Data. No folders or ordering yet;
+      Connor asked for something small.
 - [ ] **Advanced format, loose ends.** Pictures in `frame-images` are
       never cleaned up when no frame uses them, and don't travel with
       Export Data. Text does not flow between pages while typing (Fit to

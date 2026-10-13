@@ -292,7 +292,7 @@ stat block is the drag handle; see `CombatPanel.boardCell` for the two
 non-obvious parts (cancelling a drag that starts in an input, and ending a
 drag whose `dragend` never arrives).
 
-Four requests from 2026-10-11, built 2026-10-12 (not yet released). A
+Four requests from 2026-10-11, built 2026-10-12. A
 Party member has `secondAncestryId` (a mixed Ancestry; the tile reads
 "Elf-Orc"). `Subclass.backdropFocus` and `PartyMember.portraitFocus` are
 `{ x, y }` percentages used as CSS `background-position` by
@@ -313,7 +313,18 @@ summon whose target exists by its full name; it cannot find ones the book
 abbreviates ("as many Lackeys as there are PCs") or that aren't in the
 library ("Storm Giant").
 
-Built 2026-10-12 (not yet released). Pages stay mounted, so a list
+Released as v1.8.4 on 2026-10-12, with the two paragraphs around this
+one. `campaignImages` is a hand-rolled collection (id, campaignId, name,
+fileName), not `makeCollection`, because that dedupes by name and two maps
+can share one. The files live in `<store dir>/campaign-images` and are
+served as `dhmedia://campaign-image/<file>`; `campaignImages:import`,
+`:importPaths` and `:remove` in `electron/main.js` keep record and file
+together, so the generic `store:create`/`store:remove` are deliberately
+not wired for it. `CampaignImagesPanel` is first in `SessionView`'s
+sidebar and starts folded. Like music, the files are not in Export Data,
+and deleting a Campaign drops the records but leaves the files.
+
+Built 2026-10-12. Pages stay mounted, so a list
 fetched once went stale when another page wrote to its collection: a
 homebrew Environment made with a Session open never reached the Combat
 panel's picker. `apiClient.create/update/remove` now dispatch

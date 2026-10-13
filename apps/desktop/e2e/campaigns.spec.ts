@@ -362,4 +362,77 @@ test.describe('Campaigns & Party', () => {
     await win.click('button:has-text("Save Changes")');
     await expect(tileImage).toHaveCSS('background-position', '50% 50%');
   });
+
+  test("a Session has the Campaign's image folder above its music: folded to begin with, with a thumbnail and a name per picture", async () => {
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'The Wildwood');
+    await win.click('button:has-text("Create Campaign")');
+
+    // The file picker can't be driven from here, so the pictures go in the
+    // way dropped ones do: by path.
+    const fileNames = await win.evaluate(
+      async ([map, notAPicture]) => {
+        const bridge = (
+          window as unknown as {
+            daggerheart: {
+              list: (c: string) => Promise<{ id: string }[]>;
+              importCampaignImagePaths: (id: string, p: string[]) => Promise<{ images: { fileName: string }[] }>;
+            };
+          }
+        ).daggerheart;
+        const campaigns = await bridge.list('campaigns');
+        const { images } = await bridge.importCampaignImagePaths(campaigns[0].id, [map, notAPicture]);
+        return images.map((i) => i.fileName);
+      },
+      [path.join(imageDir, 'landscape.png'), path.join(imageDir, 'not-a-picture.txt')]
+    );
+    expect(fileNames).toHaveLength(1);
+    const stored = path.join(tempDir, 'campaign-images', fileNames[0]);
+    expect(fs.existsSync(stored)).toBe(true);
+
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await win.click('.session-list__add');
+    await win.fill('.create-form input[type="text"]', 'Session 1');
+    await win.click('button:has-text("Start Session")');
+    await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
+
+    // Above the music, folded, with a count.
+    const sidebar = win.locator('.session-view__sidebar');
+    await expect(sidebar.locator('> *').first()).toHaveClass(/campaign-images/);
+    const toggle = win.locator('.campaign-images__toggle');
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toContainText('1');
+    await expect(win.locator('.campaign-images__item')).toHaveCount(0);
+
+    await toggle.click();
+    const item = win.locator('.campaign-images__item');
+    await expect(item).toHaveCount(1);
+    await expect(item.locator('.campaign-images__name')).toHaveText('landscape');
+    // The thumbnail really loaded.
+    await expect.poll(() => item.locator('img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBe(120);
+
+    await item.locator('.campaign-images__name').dblclick();
+    await win.fill('.campaign-images__rename', 'Wildwood map');
+    await win.keyboard.press('Enter');
+    await expect(item.locator('.campaign-images__name')).toHaveText('Wildwood map');
+
+    // Opens large; Escape closes it.
+    await item.locator('.campaign-images__thumb').click();
+    await expect(win.getByRole('dialog', { name: 'Wildwood map' })).toBeVisible();
+    await win.keyboard.press('Escape');
+    await expect(win.locator('.campaign-images__viewer')).toHaveCount(0);
+
+    await win.reload();
+    await win.waitForSelector('text=Daggerheart Brewery', { timeout: 15000 });
+    await win.click('.app-shell__nav-link:has-text("Campaigns")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
+    await toggle.click();
+    await expect(item.locator('.campaign-images__name')).toHaveText('Wildwood map');
+
+    // Removing it removes the app's copy of the file too.
+    await item.locator('.campaign-images__remove').click();
+    await expect(item).toHaveCount(0);
+    await expect.poll(() => fs.existsSync(stored)).toBe(false);
+  });
 });

@@ -53,6 +53,9 @@ export interface DaggerheartBridge {
   importFrameImage: () => Promise<{ canceled: boolean; images: FrameImage[] }>;
   importFrameImagePaths: (filePaths: string[]) => Promise<{ images: FrameImage[] }>;
   exportFramePdf: (suggestedName: string) => Promise<{ canceled: boolean; filePath?: string }>;
+  importCampaignImages: (campaignId: string) => Promise<{ canceled: boolean; images: unknown[] }>;
+  importCampaignImagePaths: (campaignId: string, filePaths: string[]) => Promise<{ images: unknown[] }>;
+  removeCampaignImage: (id: string) => Promise<void>;
   create: (collection: string, data: unknown) => Promise<unknown>;
   update: (collection: string, id: string, patch: unknown, ctx?: SessionContext) => Promise<unknown>;
   remove: (collection: string, id: string, ctx?: SessionContext) => Promise<void>;
@@ -153,6 +156,13 @@ export const apiClient = {
   importFrameImagePaths: async (filePaths: string[]) => unwrap(bridge().importFrameImagePaths(filePaths)),
   /** Saves the window as it currently prints (see lib/brewPrint) to a PDF the user picks. */
   exportFramePdf: async (suggestedName: string) => unwrap(bridge().exportFramePdf(suggestedName)),
+  importCampaignImages: async <T>(campaignId: string) =>
+    (await unwrap(bridge().importCampaignImages(campaignId))) as { canceled: boolean; images: T[] },
+  importCampaignImagePaths: async <T>(campaignId: string, filePaths: string[]) =>
+    (await unwrap(bridge().importCampaignImagePaths(campaignId, filePaths))) as { images: T[] },
+  removeCampaignImage: async (id: string): Promise<void> => {
+    await unwrap(bridge().removeCampaignImage(id));
+  },
   cloneSession: async <T>(sourceId: string, options?: { name?: string }): Promise<T> =>
     (await unwrap(bridge().cloneSession(sourceId, options))) as T,
   importMusicFiles: async <T>(regionId: string): Promise<{ canceled: boolean; tracks: T[] }> =>

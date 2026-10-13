@@ -141,6 +141,7 @@ const LIST = {
   musicRegions: store.listMusicRegions,
   musicTracks: store.listMusicTracks,
   journalEntries: store.listJournalEntries,
+  campaignImages: store.listCampaignImages,
 };
 const CREATE = {
   gameSets: store.createGameSet,
@@ -200,6 +201,7 @@ const UPDATE = {
   musicRegions: store.updateMusicRegion,
   musicTracks: store.updateMusicTrack,
   journalEntries: store.updateJournalEntry,
+  campaignImages: store.updateCampaignImage,
 };
 // No GameSet/HeroClass/Subclass here — deleting those has real referential-
 // integrity questions (a Class with existing Subclasses, a GameSet with
@@ -459,6 +461,65 @@ function importFrameImages(filePaths) {
   return images;
 }
 
+// ---- Campaign images ----
+// A Campaign's folder of pictures, kept the same way: files under
+// <store dir>/campaign-images, shown as dhmedia://campaign-image/<name>,
+// with a record apiece in the store (see its "Campaign images" section).
+function campaignImagesDir() {
+  return path.join(store.getStoreDir(), 'campaign-images');
+}
+
+function serveCampaignImage(fileName) {
+  const type = FRAME_IMAGE_TYPES[path.extname(fileName).toLowerCase()];
+  const filePath = path.join(campaignImagesDir(), fileName);
+  if (!type || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 });
+  return new Response(fs.readFileSync(filePath), { headers: { 'Content-Type': type } });
+}
+
+async function importCampaignImages(campaignId, filePaths) {
+  fs.mkdirSync(campaignImagesDir(), { recursive: true });
+  const images = [];
+  for (const source of filePaths) {
+    const ext = path.extname(String(source)).toLowerCase();
+    if (!FRAME_IMAGE_TYPES[ext]) continue;
+    const fileName = `${randomUUID()}${ext}`;
+    const target = path.join(campaignImagesDir(), fileName);
+    fs.copyFileSync(source, target);
+    try {
+      images.push(await store.createCampaignImage({ campaignId, fileName, name: path.basename(source, path.extname(source)) }));
+    } catch (err) {
+      // No record, so no file: nothing would ever list or remove it.
+      fs.rmSync(target, { force: true });
+      throw err;
+    }
+  }
+  return images;
+}
+
+ipcMain.handle('campaignImages:import', async (event, campaignId) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
+    title: 'Add pictures',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Pictures', extensions: Object.keys(FRAME_IMAGE_TYPES).map((ext) => ext.slice(1)) }],
+  });
+  if (canceled || filePaths.length === 0) return { canceled: true, images: [] };
+  return { canceled: false, images: await importCampaignImages(campaignId, filePaths) };
+});
+
+// Dropped onto the panel (and what the e2e suite drives): paths only.
+ipcMain.handle('campaignImages:importPaths', async (_event, campaignId, filePaths) => ({
+  images: await importCampaignImages(campaignId, filePaths),
+}));
+
+// The record and its file go together.
+ipcMain.handle('campaignImages:remove', async (_event, id) => {
+  const image = store.listCampaignImages().find((i) => i.id === id);
+  if (!image) throw new Error(`No record with id ${id}`);
+  await store.removeCampaignImage(id);
+  fs.rmSync(path.join(campaignImagesDir(), image.fileName), { force: true });
+});
+
 ipcMain.handle('frames:importImage', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);
   const { canceled, filePaths } = await dialog.showOpenDialog(win, {
@@ -516,6 +577,7 @@ function serveMedia(request) {
   if (!/^[A-Za-z0-9-]+\.[a-z0-9]+$/.test(fileName)) return new Response('Bad request', { status: 400 });
   if (url.hostname === 'backdrop') return serveBackdrop(fileName);
   if (url.hostname === 'frame-image') return serveFrameImage(fileName);
+  if (url.hostname === 'campaign-image') return serveCampaignImage(fileName);
   const type = AUDIO_TYPES[path.extname(fileName).toLowerCase()];
   const filePath = path.join(musicDir(), fileName);
   if (!type || !fs.existsSync(filePath)) return new Response('Not found', { status: 404 });

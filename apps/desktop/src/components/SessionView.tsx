@@ -8,6 +8,7 @@ import BattlePointsBar from './BattlePointsBar';
 import SessionForm from './SessionForm';
 import FearTrack from './FearTrack';
 import SessionMusicPanel from './SessionMusicPanel';
+import CampaignImagesPanel from './CampaignImagesPanel';
 import CombatPanel, { type CombatSpotlightSignal } from './CombatPanel';
 import TabBar from './TabBar';
 import SessionCombatSidebar from './SessionCombatSidebar';
@@ -569,6 +570,7 @@ export default function SessionView({ session, campaignId, campaignLevel, onBack
         </div>
 
         <aside className="session-view__sidebar">
+          <CampaignImagesPanel campaignId={campaignId} />
           <SessionMusicPanel
             campaignId={campaignId}
             regionId={session.regionId ?? null}

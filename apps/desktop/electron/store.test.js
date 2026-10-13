@@ -1165,6 +1165,23 @@ describe('Combat', () => {
     expect(dead.slain).toBe(true);
   });
 
+  it("a Campaign keeps a list of pictures, which goes when the Campaign does", async () => {
+    const c = await store.createCampaign({ name: 'The Wildwood' });
+    await expect(store.createCampaignImage({ campaignId: 'missing', fileName: 'a.png', name: 'Map' })).rejects.toThrow('No campaign');
+    await expect(store.createCampaignImage({ campaignId: c.id, fileName: '../a.png', name: 'Map' })).rejects.toThrow('not a stored picture');
+    const map = await store.createCampaignImage({ campaignId: c.id, fileName: 'abc-123.png', name: ' Level 1 ' });
+    expect(map).toMatchObject({ campaignId: c.id, fileName: 'abc-123.png', name: 'Level 1' });
+    // Two pictures can share a name.
+    const twin = await store.createCampaignImage({ campaignId: c.id, fileName: 'def-456.png', name: 'Level 1' });
+    expect(twin.id).not.toBe(map.id);
+    expect((await store.updateCampaignImage(map.id, { name: 'Level 2' })).name).toBe('Level 2');
+    expect((await store.updateCampaignImage(map.id, { name: '  ' })).name).toBe('Level 2');
+    await store.removeCampaignImage(twin.id);
+    expect(store.listCampaignImages().map((i) => i.name)).toEqual(['Level 2']);
+    await store.removeCampaign(c.id);
+    expect(store.listCampaignImages()).toEqual([]);
+  });
+
   it('a Note tab can hold tabs of its own, one level deep', async () => {
     const c = await store.createCampaign({ name: 'The Wildwood' });
     const first = await store.createSession({ campaignId: c.id, name: 'Session 1' });

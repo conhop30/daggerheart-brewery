@@ -51,6 +51,7 @@ const COLLECTIONS = [
   'musicRegions',
   'musicTracks',
   'journalEntries',
+  'campaignImages',
 ];
 
 // The built-in music region that always exists: it holds the library's
@@ -1147,6 +1148,7 @@ function removeCampaign(id) {
     }
     store.sessions = store.sessions.filter((s) => s.campaignId !== id);
     store.journalEntries = store.journalEntries.filter((j) => j.campaignId !== id);
+    store.campaignImages = store.campaignImages.filter((i) => i.campaignId !== id);
     // Music folders are the user's, so a Campaign-scoped one is promoted to
     // application-wide rather than destroyed along with the Campaign — same
     // "keep the folder's tracks" spirit as removeMusicRegion above.
@@ -1318,6 +1320,50 @@ function removeJournalEntry(id) {
     const index = store.journalEntries.findIndex((j) => j.id === id);
     if (index === -1) throw new Error(`No record with id ${id}`);
     store.journalEntries.splice(index, 1);
+  });
+}
+
+// ---- Campaign images ----
+// A Campaign's folder of pictures (maps, mostly): a name and the file it
+// points at. The files themselves are copied into <store dir>/campaign-images
+// by electron/main.js, which is also what deletes one; this only keeps the
+// list. Names needn't be unique: two maps can both be called "Level 1".
+function listCampaignImages() {
+  return getCache().campaignImages;
+}
+
+function createCampaignImage(data) {
+  return mutate((store) => {
+    if (!store.campaigns.some((c) => c.id === data.campaignId)) {
+      throw new Error(`No campaign with id ${data.campaignId}`);
+    }
+    if (!/^[A-Za-z0-9-]+\.[a-z0-9]+$/.test(String(data.fileName))) throw new Error('fileName is not a stored picture');
+    const record = {
+      id: randomUUID(),
+      campaignId: data.campaignId,
+      name: String(data.name ?? '').trim() || 'Untitled',
+      fileName: data.fileName,
+    };
+    store.campaignImages.push(record);
+    return record;
+  });
+}
+
+function updateCampaignImage(id, patch) {
+  return mutate((store) => {
+    const image = store.campaignImages.find((i) => i.id === id);
+    if (!image) throw new Error(`No record with id ${id}`);
+    // Only the name can change; an empty one keeps the name it had.
+    if (patch.name !== undefined && String(patch.name).trim()) image.name = String(patch.name).trim();
+    return image;
+  });
+}
+
+function removeCampaignImage(id) {
+  return mutate((store) => {
+    const index = store.campaignImages.findIndex((i) => i.id === id);
+    if (index === -1) throw new Error(`No record with id ${id}`);
+    store.campaignImages.splice(index, 1);
   });
 }
 
@@ -2196,6 +2242,10 @@ module.exports = {
   updateJournalEntry,
   removeJournalEntry,
   listJournalEntriesByCampaign,
+  listCampaignImages,
+  createCampaignImage,
+  updateCampaignImage,
+  removeCampaignImage,
   listPartyMembers: partyMembers.list,
   createPartyMember: partyMembers.create,
   updatePartyMember: partyMembers.update,

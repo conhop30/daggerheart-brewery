@@ -595,6 +595,8 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       Adversary search by Tier, type and name, and a button on any feature
       that summons another Adversary (`lib/adversaryRefs.ts` recognises the
       capitalised name; dice such as "1d4" are rolled for the count)
+- [x] **v1.8.4** — a per-Campaign image folder for maps in the Session
+      sidebar, plus everything in the three entries below
 - [x] Environments pinned full-width above the Combat board, Notes tabs
       that hold tabs of their own, foldable Adversaries / Environments
       sections, and lists that refetch when another page changes their
