@@ -236,6 +236,37 @@ test.describe('Music library and session playback', () => {
     await expect(win.locator('select[aria-label="Music region"] option:checked')).toHaveText('The Sunken Coast');
   });
 
+  test('a Campaign page (before any Session is open) lets its music Region actually be changed', async () => {
+    // Regression test: CampaignDetail used to fetch its sidebar preview's
+    // Session once on mount and never again, so CampaignMusicSidebar's
+    // region <select> — a controlled component fed by that stale prop —
+    // visibly snapped back to the old region every time, even though the
+    // write underneath it succeeded.
+    await openMusicTab();
+    await win.click('button:has-text("+ New Region")');
+    await win.fill('input[aria-label="New region name"]', 'The Marsh');
+    await win.click('.region-list__inline-form button:has-text("Add")');
+
+    await win.click('.campaigns-page__tab:has-text("Campaigns")');
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'The Wildwood');
+    await win.click('button:has-text("Create Campaign")');
+    await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
+    await win.click('.session-list__add');
+    await win.click('button:has-text("Start Session")');
+
+    // Still on the Campaign's own page — CampaignMusicSidebar's preview,
+    // not a live Session view.
+    await expect(win.locator('.campaign-music-sidebar')).toBeVisible();
+    const regionSelect = win.locator('select[aria-label="Music region"]');
+    await regionSelect.selectOption({ label: 'The Marsh' });
+    // Give any unrelated re-render (the music progress context ticks
+    // several times a second) a chance to happen before checking — a
+    // stale prop would snap the choice back on the very next one.
+    await win.waitForTimeout(1200);
+    await expect(regionSelect.locator('option:checked')).toHaveText('The Marsh');
+  });
+
   test('dragging an audio file from the OS onto a region\'s track list imports it, no dialog needed', async () => {
     await openMusicTab();
     const filePath = path.join(audioDir, 'Calm Road.wav');

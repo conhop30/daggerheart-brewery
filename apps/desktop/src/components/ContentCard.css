@@ -86,9 +86,15 @@
   font-size: 1.1rem;
 }
 
+/* Rounded and clipped as one group, not per-button — a hover/focus fill on
+   either child is still edge-to-edge against the shared divider (see the
+   comment below), but now reads as one soft pill instead of snapping to a
+   hard, square-cornered block where it meets the group's own outer edge. */
 .content-card__actions {
   display: flex;
   flex-shrink: 0;
+  border-radius: 999px;
+  overflow: hidden;
 }
 
 /* Ethereal pair: no border on the button itself, just a hairline between

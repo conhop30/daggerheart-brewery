@@ -416,6 +416,44 @@ test.describe('Campaign Frames', () => {
     expect(maskImage).toMatch(/^url\(.*\.webp/);
   });
 
+  test("picking a Watercolor picture doesn't yank the editor's scroll position", async () => {
+    const source = path.join(tempDir, 'swamp.png');
+    fs.writeFileSync(
+      source,
+      Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFElEQVR4nGNkYPjPwMDAxAAGDAwMAA0OAQMfOdP3AAAAAElFTkSuQmCC', 'base64')
+    );
+    // Stands in for the native Open dialog the toolbar's "Watercolor picture" menu triggers.
+    await app.evaluate(
+      ({ dialog }, filePath) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [filePath] });
+      },
+      source
+    );
+
+    await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
+    await form().getByLabel('Name').fill('Scroll Check');
+    await form().getByRole('button', { name: 'Advanced' }).click();
+
+    const box = markdownBox();
+    const longDoc = Array.from({ length: 80 }, (_, i) => `Paragraph ${i + 1}.`).join('\n\n');
+    await box.fill(longDoc);
+    // A real user editing somewhere other than the very end: click near the
+    // top, then scroll the box back up (fill() leaves it scrolled to the
+    // bottom, same as a real person who'd just finished typing all of it).
+    await box.click({ position: { x: 10, y: 5 } });
+    await box.evaluate((el: HTMLTextAreaElement) => {
+      el.setSelectionRange(0, 0);
+      el.scrollTop = 0;
+    });
+
+    await win.locator('select[aria-label="Watercolor picture"]').selectOption('edge-bottom');
+    await expect(box).toContainText('imageMaskEdge', { timeout: 10000 });
+
+    // The picture landed at the cursor, and the view never jumped to show it.
+    expect(await box.evaluate((el: HTMLTextAreaElement) => el.scrollTop)).toBe(0);
+    expect(await box.evaluate((el: HTMLTextAreaElement) => el.value.startsWith('{{imageMaskEdge'))).toBe(true);
+  });
+
   test('a structured frame converts to Advanced pages and can go back', async () => {
     await win.getByRole('button', { name: '+ New Campaign Frame' }).click();
     await form().getByLabel('Name').fill('Witherwild');

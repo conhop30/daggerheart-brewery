@@ -366,6 +366,32 @@ now: `store:export` reads each `campaignImages` file and embeds it as a
 first so it never lands in `data.json` itself. Folders/ordering for the
 picture list are still not built — nobody's asked for that yet.
 
+Fixed 2026-10-24, three small reported bugs. (1) The Advanced frame
+editor's "Watercolor picture"/"Picture…" toolbar entries used to re-focus
+and jump the caret to the newly inserted text after the native file
+dialog closed — jarring on a long document. `BrewEditor.tsx`'s `insert()`
+took a `{ moveCaret }` option; the picture-insert paths (`pickImages`,
+`handleDrop`) now pass `moveCaret: false`, leaving the caret-follow
+`useLayoutEffect` a no-op for them — only the synchronous snippet buttons
+(Stain, Page break, ...) still jump the cursor, which is the one place
+staying "in flow" actually matters. (2) `CampaignDetail.tsx` fetched its
+`mostRecentSession` once on mount and never again; `CampaignMusicSidebar`'s
+Region `<select>` is fed that Session's `regionId` as a prop and writes a
+new one straight to the same record, so the picker — a controlled
+element — visibly snapped back to the old region on the very next
+unrelated re-render (the music-progress context ticks several times a
+second). Fixed by hand-rolling the same `COLLECTION_CHANGED`-listener
+pattern `useApiList`'s `watch` option already uses elsewhere, scoped
+locally since this fetch is keyed on `campaign.id` rather than a bare
+`list()` call. (3) `.content-card__action` (the shared Edit/Delete button
+pair every content type's cards use) had zero `border-radius`, so its
+hover/focus gradient fill was a hard-cornered rectangle — out of place
+next to the rest of the app's pill-shaped buttons, most visible in Dark
+theme. Fixed at `.content-card__actions` (`border-radius: 999px;
+overflow: hidden;`), which clips either child's edge-to-edge hover fill
+into one soft pill without touching the deliberate shared-divider
+"ethereal pair" layout documented in the comment just below it.
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

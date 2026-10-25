@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { campaignsApi, type Campaign } from '../api/campaigns';
 import { sessionsApi, type Session } from '../api/sessions';
 import { campaignFramesApi, type CampaignFrame } from '../api/campaignFrames';
+import { COLLECTION_CHANGED } from '../api/client';
 import CampaignMusicSidebar from './CampaignMusicSidebar';
 import CampaignForm from './CampaignForm';
 import PartyRoster from './PartyRoster';
@@ -61,13 +62,30 @@ export default function CampaignDetail({
   // recent — same convention SessionList already relies on for "Clone Most
   // Recent". Only used to seed the sidebar preview; SessionList owns the
   // actual list and its own create/delete.
+  //
+  // Also refetched on a 'sessions' COLLECTION_CHANGED event (same mechanism
+  // useApiList's `watch` option uses, applied by hand here since this fetch
+  // is keyed on campaign.id rather than a bare list() call): without it,
+  // CampaignMusicSidebar's region picker — which writes straight to this
+  // same Session record via sessionsApi.update — had no way to tell this
+  // component its own `mostRecentSession` was now stale. The picker is a
+  // controlled <select> fed by that stale regionId, so every pick visibly
+  // snapped back to the old region instead of changing.
   useEffect(() => {
     let cancelled = false;
-    sessionsApi.listByCampaign(campaign.id).then((list) => {
-      if (!cancelled) setMostRecentSession(list.length > 0 ? list[list.length - 1] : null);
-    });
+    function refresh() {
+      sessionsApi.listByCampaign(campaign.id).then((list) => {
+        if (!cancelled) setMostRecentSession(list.length > 0 ? list[list.length - 1] : null);
+      });
+    }
+    refresh();
+    function onCollectionChanged(e: Event) {
+      if ((e as CustomEvent<string>).detail === 'sessions') refresh();
+    }
+    window.addEventListener(COLLECTION_CHANGED, onCollectionChanged);
     return () => {
       cancelled = true;
+      window.removeEventListener(COLLECTION_CHANGED, onCollectionChanged);
     };
   }, [campaign.id]);
 

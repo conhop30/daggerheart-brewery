@@ -65,11 +65,19 @@ export default function BrewEditor({
     caretRef.current = null;
   }, [markdown]);
 
-  function insert(text: string) {
+  // moveCaret: false skips the focus/scroll-to-caret follow-up above —
+  // used by the picture paths below, which insert after something async
+  // (a native file dialog, or a drag-drop) already pulled focus away from
+  // the textarea. Re-focusing and jumping the view to the inserted text
+  // right as the user's attention returns reads as the whole editor
+  // yanking itself to the bottom of a long document; the synchronous
+  // snippet buttons (Stain, Page break, ...) keep the follow-up since
+  // there's no such interruption and staying mid-flow there is the point.
+  function insert(text: string, { moveCaret = true } = {}) {
     const el = textRef.current;
     const start = el ? el.selectionStart : markdown.length;
     const end = el ? el.selectionEnd : markdown.length;
-    caretRef.current = start + text.length;
+    if (moveCaret) caretRef.current = start + text.length;
     setTab('text');
     onMarkdownChange(markdown.slice(0, start) + text + markdown.slice(end));
   }
@@ -77,7 +85,7 @@ export default function BrewEditor({
   async function pickImages(build: (image: FrameImage) => string) {
     try {
       const result = await apiClient.importFrameImage();
-      if (!result.canceled) insert(result.images.map(build).join(''));
+      if (!result.canceled) insert(result.images.map(build).join(''), { moveCaret: false });
     } catch (err) {
       alertDialog(err instanceof Error ? err.message : 'Could not add that picture.');
     }
@@ -92,7 +100,7 @@ export default function BrewEditor({
     e.preventDefault();
     try {
       const { images } = await apiClient.importFrameImagePaths(paths);
-      insert(images.map((image) => snippets.image(image.url, image.name)).join(''));
+      insert(images.map((image) => snippets.image(image.url, image.name)).join(''), { moveCaret: false });
     } catch (err) {
       alertDialog(err instanceof Error ? err.message : 'Could not add that picture.');
     }
