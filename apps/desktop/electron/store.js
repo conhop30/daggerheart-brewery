@@ -1148,11 +1148,16 @@ function removeCampaign(id) {
     }
     store.sessions = store.sessions.filter((s) => s.campaignId !== id);
     store.journalEntries = store.journalEntries.filter((j) => j.campaignId !== id);
+    // Returned so the caller (main.js) can delete the picture files these
+    // records pointed at — store.js never touches campaign-images itself,
+    // same split as removeMusicTrack returning its removed record above.
+    const removedImages = store.campaignImages.filter((i) => i.campaignId === id);
     store.campaignImages = store.campaignImages.filter((i) => i.campaignId !== id);
     // Music folders are the user's, so a Campaign-scoped one is promoted to
     // application-wide rather than destroyed along with the Campaign — same
     // "keep the folder's tracks" spirit as removeMusicRegion above.
     for (const region of store.musicRegions) if (region.campaignId === id) region.campaignId = null;
+    return { removedImages };
   });
 }
 

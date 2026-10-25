@@ -435,4 +435,94 @@ test.describe('Campaigns & Party', () => {
     await expect(item).toHaveCount(0);
     await expect.poll(() => fs.existsSync(stored)).toBe(false);
   });
+
+  test('deleting a Campaign also deletes its picture files, not just their records', async () => {
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'Doomed Campaign');
+    await win.click('button:has-text("Create Campaign")');
+
+    const fileName = await win.evaluate(async (mapPath) => {
+      const bridge = (
+        window as unknown as {
+          daggerheart: {
+            list: (c: string) => Promise<{ id: string }[]>;
+            importCampaignImagePaths: (id: string, p: string[]) => Promise<{ images: { fileName: string }[] }>;
+          };
+        }
+      ).daggerheart;
+      const campaigns = await bridge.list('campaigns');
+      const { images } = await bridge.importCampaignImagePaths(campaigns[0].id, [mapPath]);
+      return images[0].fileName;
+    }, path.join(imageDir, 'landscape.png'));
+    const stored = path.join(tempDir, 'campaign-images', fileName);
+    expect(fs.existsSync(stored)).toBe(true);
+
+    await win.locator('.campaign-row', { hasText: 'Doomed Campaign' }).click();
+    await win.click('.campaign-detail__hero-action--danger');
+    await expect(win.locator('.campaign-row', { hasText: 'Doomed Campaign' })).toHaveCount(0);
+
+    expect(fs.existsSync(stored)).toBe(false);
+  });
+
+  test("a Campaign's pictures travel with Export Data and are restored on Import", async () => {
+    await win.click('.campaign-row--hollow');
+    await win.fill('.create-form input[type="text"]', 'The Wildwood');
+    await win.click('button:has-text("Create Campaign")');
+
+    const fileName = await win.evaluate(async (mapPath) => {
+      const bridge = (
+        window as unknown as {
+          daggerheart: {
+            list: (c: string) => Promise<{ id: string }[]>;
+            importCampaignImagePaths: (id: string, p: string[]) => Promise<{ images: { fileName: string }[] }>;
+          };
+        }
+      ).daggerheart;
+      const campaigns = await bridge.list('campaigns');
+      const { images } = await bridge.importCampaignImagePaths(campaigns[0].id, [mapPath]);
+      return images[0].fileName;
+    }, path.join(imageDir, 'landscape.png'));
+    const stored = path.join(tempDir, 'campaign-images', fileName);
+    const originalBytes = fs.readFileSync(stored);
+
+    const exportPath = path.join(tempDir, 'export.json');
+    await app.evaluate(
+      ({ dialog }, filePath) => {
+        dialog.showSaveDialog = async () => ({ canceled: false, filePath });
+      },
+      exportPath
+    );
+    await win.click('.app-shell__brand');
+    await win.click('text=Export Data');
+    await expect.poll(() => fs.existsSync(exportPath), { timeout: 5000 }).toBe(true);
+
+    const exported = JSON.parse(fs.readFileSync(exportPath, 'utf-8'));
+    const exportedImage = exported.campaignImages.find((i: { fileName: string }) => i.fileName === fileName);
+    expect(exportedImage.imageData).toMatch(/^data:image\/png;base64,/);
+
+    // Simulate arriving on a machine that never had the file — only the
+    // export JSON, with the picture's bytes embedded in it, exists now.
+    fs.rmSync(stored);
+    expect(fs.existsSync(stored)).toBe(false);
+
+    await app.evaluate(
+      ({ dialog }, filePath) => {
+        dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [filePath] });
+      },
+      exportPath
+    );
+    await win.click('text=Import Data');
+    await expect(win.locator('text=Imported')).toBeVisible();
+
+    expect(fs.existsSync(stored)).toBe(true);
+    expect(fs.readFileSync(stored)).toEqual(originalBytes);
+    // The embedded copy never leaks into the live store itself.
+    const storedRecord = await win.evaluate(async (id) => {
+      const bridge = (window as unknown as { daggerheart: { list: (c: string) => Promise<Record<string, unknown>[]> } })
+        .daggerheart;
+      const images = await bridge.list('campaignImages');
+      return images.find((i) => i.fileName === id);
+    }, fileName);
+    expect(storedRecord).not.toHaveProperty('imageData');
+  });
 });

@@ -225,7 +225,13 @@ const REMOVE = {
   // Sessions/SessionAdversaries/SessionEnvironments) inside store.js itself
   // — unlike Domain/Card, a Campaign's children have no other reachable
   // gallery, so leaving them orphaned would strand them with no UI path.
-  campaigns: store.removeCampaign,
+  // It also deletes the picture files its campaignImages records pointed
+  // at — store.js hands back which ones it removed, same pattern as
+  // musicTracks below.
+  campaigns: async (id) => {
+    const { removedImages } = await store.removeCampaign(id);
+    for (const image of removedImages) fs.rmSync(path.join(campaignImagesDir(), image.fileName), { force: true });
+  },
   partyMembers: store.removePartyMember,
   lootTables: store.removeLootTable,
   consumableTables: store.removeConsumableTable,
@@ -320,7 +326,8 @@ ipcMain.handle('store:export', async (event) => {
     filters: [{ name: 'JSON', extensions: ['json'] }],
   });
   if (canceled || !filePath) return { canceled: true };
-  fs.writeFileSync(filePath, JSON.stringify(store.exportSnapshot(), null, 2), 'utf-8');
+  const snapshot = { ...store.exportSnapshot(), campaignImages: exportCampaignImages() };
+  fs.writeFileSync(filePath, JSON.stringify(snapshot, null, 2), 'utf-8');
   return { canceled: false, filePath };
 });
 
@@ -333,6 +340,7 @@ ipcMain.handle('store:import', async (event) => {
   });
   if (canceled || filePaths.length === 0) return { canceled: true };
   const incoming = JSON.parse(fs.readFileSync(filePaths[0], 'utf-8'));
+  importCampaignImageFiles(incoming.campaignImages);
   const { importedCount } = await store.importSnapshot(incoming);
   return { canceled: false, filePath: filePaths[0], importedCount };
 });
@@ -519,6 +527,36 @@ ipcMain.handle('campaignImages:remove', async (_event, id) => {
   await store.removeCampaignImage(id);
   fs.rmSync(path.join(campaignImagesDir(), image.fileName), { force: true });
 });
+
+// data.json only ever holds a campaignImages record's fileName, so a plain
+// store.exportSnapshot() left every picture behind — the export JSON was
+// "self-contained" in name only. Export instead reads each file in and
+// embeds it as a data: URL (same convention as Campaign's own coverImage),
+// so the one exported file actually carries everything; import reverses
+// this, writing the bytes back to campaign-images before the record itself
+// is upserted.
+function exportCampaignImages() {
+  return store.listCampaignImages().map((image) => {
+    const srcPath = path.join(campaignImagesDir(), image.fileName);
+    const type = FRAME_IMAGE_TYPES[path.extname(image.fileName).toLowerCase()];
+    if (!type || !fs.existsSync(srcPath)) return image;
+    const base64 = fs.readFileSync(srcPath).toString('base64');
+    return { ...image, imageData: `data:${type};base64,${base64}` };
+  });
+}
+
+function importCampaignImageFiles(images) {
+  if (!Array.isArray(images)) return;
+  fs.mkdirSync(campaignImagesDir(), { recursive: true });
+  for (const image of images) {
+    if (!image || typeof image.imageData !== 'string') continue;
+    const data = image.imageData;
+    delete image.imageData; // never meant to land in data.json itself
+    const match = /^data:[^;]+;base64,(.+)$/.exec(data);
+    if (!match || !/^[A-Za-z0-9-]+\.[a-z0-9]+$/.test(String(image.fileName))) continue;
+    fs.writeFileSync(path.join(campaignImagesDir(), image.fileName), Buffer.from(match[1], 'base64'));
+  }
+}
 
 ipcMain.handle('frames:importImage', async (event) => {
   const win = BrowserWindow.fromWebContents(event.sender);

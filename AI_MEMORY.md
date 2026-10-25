@@ -352,6 +352,20 @@ and deletes inner tabs before their outer one. The Adversaries &
 Environments page's two section headings fold their sections
 (localStorage).
 
+Fixed 2026-10-24, closing the two loose ends the paragraph above once
+flagged: `removeCampaign` (`electron/store.js`) now returns
+`{ removedImages }` instead of silently dropping them, and `main.js`'s
+`campaigns` entry in `REMOVE` deletes each one's file from
+`campaign-images` after the records go — same split as `removeMusicTrack`
+already used (store.js never touches disk itself; the caller does,
+using what store.js hands back). Pictures also travel with Export Data
+now: `store:export` reads each `campaignImages` file and embeds it as a
+`data:` URL under `imageData` (same convention as Campaign's own
+`coverImage`), and `store:import` writes those bytes back into
+`campaign-images` before `importSnapshot` runs, stripping `imageData`
+first so it never lands in `data.json` itself. Folders/ordering for the
+picture list are still not built — nobody's asked for that yet.
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

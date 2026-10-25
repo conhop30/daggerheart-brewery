@@ -1178,7 +1178,10 @@ describe('Combat', () => {
     expect((await store.updateCampaignImage(map.id, { name: '  ' })).name).toBe('Level 2');
     await store.removeCampaignImage(twin.id);
     expect(store.listCampaignImages().map((i) => i.name)).toEqual(['Level 2']);
-    await store.removeCampaign(c.id);
+    // Hands back what it removed so main.js can delete the backing files —
+    // store.js itself never touches campaign-images on disk.
+    const { removedImages } = await store.removeCampaign(c.id);
+    expect(removedImages).toEqual([map]); // map.name is 'Level 2' by now — updateCampaignImage mutated it in place
     expect(store.listCampaignImages()).toEqual([]);
   });
 
