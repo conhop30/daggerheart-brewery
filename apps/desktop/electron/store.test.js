@@ -1243,6 +1243,19 @@ describe('Combat', () => {
     expect(store.listNoteTabs()).toEqual([]);
   });
 
+  it('a tab defaults to 1 column, accepts 2, and clamps anything else back to 1', async () => {
+    const c = await store.createCampaign({ name: 'The Wildwood' });
+    const session = await store.createSession({ campaignId: c.id, name: 'Session 1' });
+    const tab = await store.createNoteTab({ sessionId: session.id, name: 'Notes', order: 0 });
+    expect(tab.columns).toBe(1);
+
+    const twoCol = await store.updateNoteTab(tab.id, { columns: 2 }, { sessionId: session.id });
+    expect(twoCol.columns).toBe(2);
+
+    const backToOne = await store.updateNoteTab(tab.id, { columns: 5 }, { sessionId: session.id });
+    expect(backToOne.columns).toBe(1);
+  });
+
   it('a Party member records Class, Subclass, Ancestry and Community, validated against real records', async () => {
     const gs = await store.createGameSet({ name: 'Core' });
     const c = await store.createCampaign({ name: 'The Wildwood' });

@@ -557,15 +557,15 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await win.locator('.campaign-row', { hasText: 'The Wildwood' }).click();
     await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
     await expect(win.locator('.notes-tab-bar__label')).toHaveText(['Notes']);
-    await expect(win.locator('.session-notes-panel__notes')).toHaveValue('Remember the bridge toll.');
+    await expect(win.locator('.rich-notes-editor__content')).toHaveText('Remember the bridge toll.');
   });
 
-  test('the Notes textarea stays clickable even where it visually overlaps the fixed Dice Tray', async () => {
+  test('the Notes editor stays clickable even where it visually overlaps the fixed Dice Tray', async () => {
     // DiceTray is position:fixed, bottom-center of the whole viewport, and
     // on a short/empty Session it lands right on top of the Notes section
     // (the default last main-column section) — document.elementFromPoint
     // used to resolve to .dice-tray there, silently eating the click
-    // instead of focusing the textarea underneath it.
+    // instead of focusing the editor underneath it.
     await createCampaignAndOpenSession('The Wildwood', 'Session 1');
     // Both the session page and DiceTray fade/slide in on mount — let that
     // settle before measuring boxes, or the computed overlap point can be
@@ -575,11 +575,15 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     // the tray), so scroll its bottom edge to just inside the tray's top
     // padding — deep enough to overlap, shallow enough that the click below
     // lands on the tray's inert container rather than one of its buttons.
-    const notes = win.locator('.session-notes-panel__notes');
+    const notes = win.locator('.rich-notes-editor__editable');
     const tray = win.locator('.dice-tray');
     // On an empty Session the Notes end well above the tray; a GM's notes
-    // are rarely that short, so give them the height of a real page.
+    // are rarely that short, so give them the height of a real page. flex
+    // has to be overridden too — this element is a flex:1 child, and a
+    // flex-basis of 0% (what flex:1 sets) wins over an explicit height for
+    // main-axis sizing, so the plain height alone would be a no-op here.
     await notes.evaluate((el) => {
+      (el as HTMLElement).style.flex = 'none';
       (el as HTMLElement).style.height = '900px';
     });
     const before = { notes: await notes.boundingBox(), tray: await tray.boundingBox() };
@@ -597,8 +601,47 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     expect(overlapY).toBeGreaterThan(Math.max(notesBox.y, diceTrayBox.y));
 
     await win.mouse.click(overlapX, overlapY);
+    // The editor's own focus() defers the real DOM focus() call to the next
+    // animation frame (Tiptap's own FocusCommand) — wait for it to actually
+    // land before typing, the same gap a human's own reaction time leaves
+    // for free, or the first keystroke or two go nowhere.
+    await expect(win.locator('.rich-notes-editor__content')).toBeFocused();
     await win.keyboard.type('Typed where Dice Tray overlaps', { delay: 10 });
-    await expect(win.locator('.session-notes-panel__notes')).toHaveValue('Typed where Dice Tray overlaps');
+    await expect(win.locator('.rich-notes-editor__content')).toHaveText('Typed where Dice Tray overlaps');
+  });
+
+  test('formats Notes live as Markdown is typed, round-trips through reload, and reflows into 2 columns', async () => {
+    await createCampaignAndOpenSession('The Wildwood', 'Session 1');
+
+    const content = win.locator('.rich-notes-editor__content');
+    await content.click();
+    await win.keyboard.type('# Heading\nSome **plain** text.\n');
+    await expect(win.locator('.rich-notes-editor__content h1')).toHaveText('Heading');
+    await expect(win.locator('.rich-notes-editor__content strong')).toHaveText('plain');
+
+    // The toolbar applies formatting at the current cursor position, not
+    // just by inserting literal "**"/"#" characters — regression coverage
+    // for a real bug where a toolbar click's blur (promoting a brand-new,
+    // never-saved tab to a real one) clobbered whatever was typed next.
+    await win.getByRole('button', { name: 'Bullet list' }).click();
+    await win.keyboard.type('First item');
+    await expect(win.locator('.rich-notes-editor__content ul li')).toHaveText('First item');
+
+    await win.click('button:has-text("Show Markdown")');
+    await expect(win.locator('.rich-notes-editor__raw')).toHaveValue(/^# Heading[\s\S]*- First item$/);
+    await win.click('button:has-text("Show Formatted")');
+
+    await expect(win.locator('.rich-notes-editor__editable')).not.toHaveClass(/--columns/);
+    await win.click('.session-notes-panel__columns-toggle');
+    await expect(win.locator('.rich-notes-editor__editable')).toHaveClass(/--columns/);
+
+    // Reopening the Session re-reads the same Markdown back into formatted
+    // text, and the per-tab column layout persisted too.
+    await win.click('.session-view__back');
+    await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
+    await expect(win.locator('.rich-notes-editor__content h1')).toHaveText('Heading');
+    await expect(win.locator('.rich-notes-editor__content ul li')).toHaveText('First item');
+    await expect(win.locator('.rich-notes-editor__editable')).toHaveClass(/--columns/);
   });
 
   test('renaming a Session keeps its Journal entry’s label in sync, rather than orphaning it', async () => {
@@ -1179,7 +1222,15 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
   test('Notes have renamable tabs, each with its own text, that follow the Combat tab of the same name and carry forward', async () => {
     await createCampaignAndOpenSession('The Wildwood', 'Session 1');
     const noteTabs = win.locator('.notes-tab-bar__tab');
-    const notes = win.locator('.session-notes-panel__notes');
+    // The raw-Markdown view: this test is about tab/session persistence of
+    // plain text, not formatting, so it reads/writes through the same
+    // underlying textarea RichNotesEditor's "Show Markdown" toggle exposes
+    // — .fill()/.blur()/toHaveValue() all behave exactly like the plain
+    // textarea this used to be. A fresh SessionView remounts the editor
+    // back to its rich default, hence showMarkdown() after each reopen.
+    const notes = win.locator('.rich-notes-editor__raw');
+    const showMarkdown = () => win.click('button:has-text("Show Markdown")');
+    await showMarkdown();
 
     // One tab to begin with.
     await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Notes']);
@@ -1222,6 +1273,7 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await win.click('button:has-text("Start Session")');
     await win.locator('.content-card', { hasText: 'Session 2' }).getByRole('button', { name: 'Open' }).click();
     await expect(win.locator('.session-view__title')).toHaveText('Session 2');
+    await showMarkdown();
     await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Notes', 'Boss Fight']);
     await expect(notes).toHaveValue('Opening scene.');
     await notes.fill('Session two picks up at the gate.');
@@ -1232,6 +1284,7 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await win.click('.session-view__back');
     await win.locator('.content-card', { hasText: 'Session 1' }).getByRole('button', { name: 'Open' }).click();
     await expect(win.locator('.session-view__title')).toHaveText('Session 1');
+    await showMarkdown();
     await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Notes', 'Boss Fight']);
     await expect(notes).toHaveValue('Opening scene.');
   });
@@ -1501,7 +1554,11 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await createCampaignAndOpenSession('The Wildwood', 'Session 1');
     const noteTabs = win.locator('.notes-tab-bar__tab');
     const inner = win.locator('.notes-inner-tab-bar__tab');
-    const notes = win.locator('.session-notes-panel__notes');
+    // See the previous test's comment on why this reads/writes the raw-
+    // Markdown textarea rather than the formatted view.
+    const notes = win.locator('.rich-notes-editor__raw');
+    const showMarkdown = () => win.click('button:has-text("Show Markdown")');
+    await showMarkdown();
 
     await noteTabs.nth(0).dblclick();
     await win.fill('.notes-tab-bar__rename', 'Cephilith');
@@ -1544,6 +1601,7 @@ test.describe('Sessions (Fear, combat, loot rolling)', () => {
     await win.click('button:has-text("Start Session")');
     await win.locator('.content-card', { hasText: 'Session 2' }).getByRole('button', { name: 'Open' }).click();
     await expect(win.locator('.session-view__title')).toHaveText('Session 2');
+    await showMarkdown();
     await expect(noteTabs.locator('.notes-tab-bar__label')).toHaveText(['Cephilith', 'Notes 2']);
     await expect(inner.locator('.notes-inner-tab-bar__label')).toHaveText(['Overview', 'Titan', 'Page 2']);
     await inner.nth(2).click();

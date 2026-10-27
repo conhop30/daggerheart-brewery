@@ -416,6 +416,45 @@ anymore. Party/Fear/music-region/Combat-tabs/Notes-tabs carry-forward is
 completely unchanged. `README.md`'s carry-forward section and roadmap
 checklist were corrected to stop saying "board" carries.
 
+Added 2026-10-26: Session Notes now format live as Markdown is typed
+("# Heading" becomes an actual heading in place as you type the space,
+no separate preview pane), with a raw-Markdown toggle for anyone who'd
+rather edit the literal syntax, and a per-tab 2-column reflow of the
+formatted view. New component `src/components/RichNotesEditor.tsx`,
+built on Tiptap 3 (`@tiptap/core`/`@tiptap/react`/`@tiptap/starter-kit`/
+`@tiptap/extension-placeholder`) + `tiptap-markdown` for the Markdown
+round-trip, so the stored text is still plain Markdown — same format as
+every other free-text field, not a proprietary blob. `noteTabs` gained a
+`columns: 1 | 2` field in store.js (clamped in `validateNoteTab`,
+defaulted in `present`), carried forward exactly like the rest of a
+NoteTab (unaffected by the SessionAdversary/Environment change above).
+
+Two real bugs surfaced and fixed building this, both in
+`SessionNotesPanel.tsx`, not in Tiptap itself:
+1. Tiptap's own `focus()` command defers the actual DOM `.focus()` call to
+   the next animation frame (not synchronous) on non-Safari/iOS — so a
+   toolbar click needs a beat before the editor can accept typing again.
+   Real UI impact: none a human would notice (reaction time already
+   exceeds one frame); it only bit scripted tests typing immediately
+   after a click.
+2. The real one: `SessionNotesPanel` promotes a brand-new, never-saved
+   Notes tab to a real record on *blur* (`commitNotes` → `saveFirstTab`),
+   and clicking any `RichNotesEditor` toolbar button blurs the editor.
+   `saveFirstTab` is async and used to snapshot `draft` at call time as
+   the new tab's `notes` — if the user kept typing/formatting while that
+   create() was in flight (exactly what a toolbar click triggers), the
+   `page.id`/`activeNotes` effect further down fed that *stale* snapshot
+   back into `draft` the instant the id changed, silently reverting
+   whatever had just been typed (e.g. "click Bullet list, type text" lost
+   the text and even un-did the list). Fixed by having `saveFirstTab`
+   overwrite the locally-held record's `notes` with a `draftRef`-tracked
+   live value instead of trusting the pre-`await` snapshot — the write
+   sent to the backend is unchanged, only what's kept in local state is
+   corrected. (This also meant `RichNotesEditor` no longer needs — and
+   must not use — a `key={page.id}` remount-on-tab-switch trick: it syncs
+   an externally-changed `value` prop into the live editor via its own
+   effect instead, comparing against the last value it itself emitted.)
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

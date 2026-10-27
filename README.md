@@ -57,6 +57,7 @@ need one manual update.
 | Data layer | **A single JSON file, no database engine or ORM** | `electron/store.js` is plain Node — synchronous CRUD + validation functions operating on an in-memory cache that's flushed to `~/.daggerheart-hub/data.json`. No SQLite, no Prisma/TypeORM. Chosen specifically so the same data-layer approach can be ported to a future React Native mobile client, which can't embed a JVM (ruling out the original Spring Boot backend) or a native SQLite driver the same way Electron can. |
 | State management | **Component state + two React Contexts** | No Redux/Zustand. Almost all state is local to the page that owns it (the same drill-down pattern used throughout: gallery → detail → nested list). `GameSetsProvider` is a root-mounted context for the handful of values (Game Sets) that need to be visible from every form at once; `MusicProvider` is a second one that owns the single app-wide `<audio>` element and playback state, so Session music survives navigating away instead of unmounting with the view that started it. |
 | Styling | **Plain CSS with custom-property design tokens** | No Tailwind/MUI dependency. Light/dark theming is two value sets under the same CSS variable names (`tokens.css`), swapped via a `data-theme` attribute — component CSS never needed to change when theming was added. |
+| Rich text | **Tiptap 3** (`@tiptap/react`, `tiptap-markdown`) | Session Notes format live as you type (`# `/`**`/`- ` become real headings/bold/lists in place, Obsidian-style) while still storing and round-tripping plain Markdown — the same portable text format every other free-text field in this app already uses, not a proprietary rich-text blob. |
 | Unit testing | **Vitest** | Drives `electron/store.js`'s CRUD and validation rules directly (idempotent-by-name creates, rename-collision handling, domain-pair/weapon-burden validation, export/import merge semantics) without ever touching the real on-disk store — each test run gets a throwaway directory via a `DAGGERHEART_STORE_DIR` env override. |
 | End-to-end testing | **Playwright**, via `_electron.launch()` | Drives the *actual* packaged-shape Electron app — a real window, real IPC round trips, a real (throwaway) store file — not a mocked browser page. |
 | Packaging | **electron-builder** | Produces a real NSIS installer on Windows (dmg/AppImage configured for macOS/Linux), verified by installing and running the unpacked build end to end. |
@@ -308,7 +309,10 @@ content above, as opposed to authoring it. Delivered in three phases:
   stat block is the drag handle, and a drag shows an outlined card at the
   pointer with a running count. **Kill** moves an Adversary to a pooled
   Slain tally instead of forgetting it. **Notes** have renamable tabs that
-  follow the Combat tab of the same name and carry forward. Fear is a rail
+  follow the Combat tab of the same name and carry forward, format live as
+  Markdown is typed (headings, bold, bullet/numbered lists — see Tech
+  Stack's Tiptap row) with a raw-Markdown toggle for anyone who'd rather
+  edit the syntax directly, and can reflow into 2 columns per tab. Fear is a rail
   fixed to the window's left edge. The planning is pure functions
   (`lib/battlePoints`, `lib/minionGroups`) with the UI only laying the
   result out. Built as independent, self-contained panels on
@@ -684,6 +688,12 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
 - [x] Campaign Frames, Advanced format: Homebrewery-style Markdown pages
       with pictures, watercolor stains and edges, per-frame CSS, PDF
       export; two-column reading for structured frames
+- [x] A Session's board (pulled-in Adversaries/Environments) is now
+      session-scoped instead of carrying forward — a new Session always
+      starts with an empty board; Clone Most Recent still duplicates it
+      explicitly for a fight spanning a real session break
+- [x] Session Notes format live as Markdown is typed (Tiptap), with a
+      raw-Markdown toggle and a per-tab 2-column reflow
 - [ ] A table view for Heritage and Optional Mechanics (a shared card
       grid today)
 - [ ] Campaign Frame maps, and using a frame's mechanics inside a live

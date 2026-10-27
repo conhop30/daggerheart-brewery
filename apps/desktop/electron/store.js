@@ -1961,12 +1961,17 @@ function validateNoteTab(store, data) {
     if (!parent) throw new Error(`No note tab with id ${data.parentId}`);
     if (parent.parentId != null) throw new Error('A tab inside another tab cannot hold tabs of its own');
   }
+  // How the formatted (Markdown-rendered) view lays the text out — a
+  // per-tab display preference, not part of the text itself. Anything
+  // else collapses to the 1-column default rather than erroring, same
+  // spirit as clampNumber elsewhere in this file.
+  if (data.columns !== undefined) data.columns = data.columns === 2 ? 2 : 1;
 }
 
 const noteTabs = makeVersionedCollection('noteTabs', {
   context: sessionContext,
   validate: validateNoteTab,
-  present: (record) => ({ ...record, parentId: record.parentId ?? null }),
+  present: (record) => ({ ...record, parentId: record.parentId ?? null, columns: record.columns === 2 ? 2 : 1 }),
   build(_store, data, { campaignId, sessionId }) {
     if (data.order === undefined) throw new Error('order is required');
     return {
@@ -1977,6 +1982,7 @@ const noteTabs = makeVersionedCollection('noteTabs', {
       order: Math.round(Number(data.order)) || 0,
       notes: data.notes ?? '',
       parentId: data.parentId ?? null,
+      columns: data.columns === 2 ? 2 : 1,
     };
   },
 });

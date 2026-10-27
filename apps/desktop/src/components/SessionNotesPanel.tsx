@@ -3,6 +3,7 @@ import { journalApi } from '../api/journal';
 import { noteTabsApi, type NoteTab } from '../api/noteTabs';
 import type { Session } from '../api/sessions';
 import TabBar, { type Tab } from './TabBar';
+import RichNotesEditor from './RichNotesEditor';
 import './SessionNotesPanel.css';
 import { alertDialog, confirmDialog } from '../lib/confirm';
 
@@ -109,6 +110,11 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
 
   const tabsRef = useRef(tabs);
   tabsRef.current = tabs;
+  // Read inside saveFirstTab's continuation after its `await`, where the
+  // function's own closed-over `draft` would otherwise be stale — see its
+  // comment for the real bug this fixed.
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   useEffect(() => {
     if (!tabSignal) return;
     const match = tabsRef.current.find((t) => sameName(t.name, tabSignal.name));
@@ -128,9 +134,18 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
       order: 0,
       notes: fields.notes ?? draft,
     });
-    setSaved([created]);
-    setActiveId(created.id);
-    return created;
+    // Real bug this fixed: create() is async, and this promotion runs on
+    // *blur* (RichNotesEditor's toolbar buttons blur-then-refocus on every
+    // click), so the user can keep editing while it's in flight. Trusting
+    // the server's echoed `notes` here — a snapshot from before the
+    // await — would then feed stale text back into `draft` the instant
+    // `page.id` changes below (see the activeNotes effect above), clobbering
+    // whatever was typed since. The live draft, not the request's snapshot,
+    // is the source of truth for what this tab's id should now point at.
+    const withLiveNotes = { ...created, notes: draftRef.current };
+    setSaved([withLiveNotes]);
+    setActiveId(withLiveNotes.id);
+    return withLiveNotes;
   }
 
   async function addInner() {
@@ -178,7 +193,7 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
     }
   }
 
-  async function patch(tab: NoteTab, fields: { name?: string; notes?: string; order?: number }) {
+  async function patch(tab: NoteTab, fields: { name?: string; notes?: string; order?: number; columns?: 1 | 2 }) {
     setSaved((prev) => prev.map((t) => (t.id === tab.id ? { ...t, ...fields } : t)));
     await noteTabsApi.update(tab.id, fields, ctx);
   }
@@ -192,6 +207,15 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
       }
     } catch (err) {
       fail(err, 'Could not save these notes.');
+    }
+  }
+
+  async function toggleColumns() {
+    if (!page.saved) return; // the unsaved placeholder tab has nothing to persist this onto yet
+    try {
+      await patch(page.saved, { columns: page.saved.columns === 2 ? 1 : 2 });
+    } catch (err) {
+      fail(err, 'Could not change these notes’ layout.');
     }
   }
 
@@ -280,12 +304,17 @@ export default function SessionNotesPanel({ campaignId, session, tabSignal }: Se
         onAdd={addInner}
         onDelete={removeInner}
       />
-      <textarea
-        className="session-notes-panel__notes"
-        placeholder={`Notes for ${page === active ? active.name : `${active.name} / ${page.name}`}…`}
+      {page.saved && (
+        <button type="button" className="session-notes-panel__columns-toggle" onClick={toggleColumns}>
+          {page.saved.columns === 2 ? 'Columns: 2' : 'Columns: 1'}
+        </button>
+      )}
+      <RichNotesEditor
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
+        onChange={setDraft}
         onBlur={commitNotes}
+        placeholder={`Notes for ${page === active ? active.name : `${active.name} / ${page.name}`}…`}
+        columns={page.saved?.columns ?? 1}
       />
     </div>
   );

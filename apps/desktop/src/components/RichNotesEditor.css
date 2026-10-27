@@ -1,0 +1,161 @@
+.rich-notes-editor {
+  display: flex;
+  flex-direction: column;
+  min-height: 140px;
+}
+
+.rich-notes-editor__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: 4px;
+}
+
+.rich-notes-editor__bar-spacer {
+  flex: 1;
+}
+
+.rich-notes-editor__toolbar {
+  display: flex;
+  gap: 2px;
+}
+
+.rich-notes-editor__btn {
+  background: none;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  transition:
+    background 160ms var(--ease),
+    color 160ms var(--ease),
+    border-color 160ms var(--ease);
+}
+
+.rich-notes-editor__btn:hover {
+  color: var(--ink);
+  border-color: var(--hope-dim);
+}
+
+.rich-notes-editor__btn--active {
+  color: var(--hope);
+  border-color: var(--hope-dim);
+  background: rgba(228, 179, 65, 0.12);
+}
+
+.rich-notes-editor__mode-toggle {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  padding: 2px 4px;
+  transition: color 160ms var(--ease);
+}
+
+.rich-notes-editor__mode-toggle:hover {
+  color: var(--hope);
+}
+
+.rich-notes-editor__editable,
+.rich-notes-editor__raw {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1;
+  min-height: 140px;
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  transition: border-color 160ms var(--ease);
+}
+
+.rich-notes-editor__editable:focus-within,
+.rich-notes-editor__raw:focus {
+  border-color: var(--hope);
+  outline: none;
+}
+
+.rich-notes-editor__raw {
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+  color: var(--ink-dim, var(--muted));
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+}
+
+.rich-notes-editor__content {
+  padding: 0.6rem 0.75rem;
+  color: var(--ink-dim, var(--muted));
+  font-family: var(--font-body);
+  font-size: 0.88rem;
+  line-height: 1.55;
+  outline: none;
+}
+
+/* Newspaper-style reflow of the one note into two columns — a layout
+   choice on this wrapper, not a different document; toggled per Notes tab
+   (see SessionNotesPanel). The raw-Markdown view never does this, since
+   CSS columns would just split the literal "#"/"-" syntax mid-line. */
+.rich-notes-editor__editable--columns .rich-notes-editor__content {
+  column-count: 2;
+  column-gap: 2rem;
+}
+
+.rich-notes-editor__content p {
+  margin: 0 0 0.6em;
+}
+
+.rich-notes-editor__content h1,
+.rich-notes-editor__content h2,
+.rich-notes-editor__content h3 {
+  font-family: var(--font-display);
+  color: var(--ink);
+  line-height: 1.25;
+  margin: 0.7em 0 0.35em;
+  break-after: avoid;
+}
+
+.rich-notes-editor__content h1 {
+  font-size: 1.3rem;
+}
+
+.rich-notes-editor__content h2 {
+  font-size: 1.12rem;
+}
+
+.rich-notes-editor__content h3 {
+  font-size: 1rem;
+}
+
+.rich-notes-editor__content ul,
+.rich-notes-editor__content ol {
+  margin: 0 0 0.6em;
+  padding-left: 1.3em;
+}
+
+.rich-notes-editor__content li {
+  margin: 0.15em 0;
+}
+
+.rich-notes-editor__content strong {
+  color: var(--ink);
+}
+
+.rich-notes-editor__content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: var(--muted);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

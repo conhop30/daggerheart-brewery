@@ -13,6 +13,8 @@ export interface NoteTab {
   notes: string;
   /** The tab this one sits inside, or null for a tab on the top row. */
   parentId: string | null;
+  /** How the formatted view lays this tab's text out — see RichNotesEditor. Defaults to 1. */
+  columns: 1 | 2;
   /** True when this tab was last changed in an earlier session than the one being viewed. */
   carried?: boolean;
 }
@@ -29,6 +31,7 @@ export interface UpdateNoteTabRequest {
   name?: string;
   order?: number;
   notes?: string;
+  columns?: 1 | 2;
 }
 
 export const noteTabsApi = {
