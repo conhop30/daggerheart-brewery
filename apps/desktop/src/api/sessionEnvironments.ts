@@ -18,8 +18,6 @@ export interface SessionEnvironment {
   notes: string | null;
   /** Shown full-width above the board, in as little height as it can take. */
   pinned: boolean;
-  /** True when this was pulled in (or last changed) in an earlier session than the one being viewed. */
-  carried?: boolean;
 }
 
 export interface CreateSessionEnvironmentRequest {

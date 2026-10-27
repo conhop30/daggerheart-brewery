@@ -40,8 +40,6 @@ export interface SessionAdversary {
   /** Same idea as difficultyModifier, one per Threshold. */
   thresholdsModifier: Thresholds;
   conditions: SessionCondition[];
-  /** True when this was pulled in (or last changed) in an earlier session than the one being viewed. */
-  carried?: boolean;
 }
 
 export interface CreateSessionAdversaryRequest {

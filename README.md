@@ -294,8 +294,9 @@ content above, as opposed to authoring it. Delivered in three phases:
   readout in the sidebar. The board itself is split into **Combat tabs**
   (drag to reorder, double-click to rename), each with its own Adversary/
   Environment roster, so several encounters can be prepped ahead without
-  disturbing the one in play; tabs carry forward across a Campaign's
-  Sessions like everything else on the board. Each tab shows its
+  disturbing the one in play; the tabs themselves carry forward across a
+  Campaign's Sessions, even though what's pulled into them deliberately
+  does not (see the carry-forward section below). Each tab shows its
   **Battle Points** (the corebook's `(3 x PCs) + 2` budget against what the
   roster costs by Adversary type, with the rulebook's adjustments), and
   Minions are tracked as **stacks**: one tile with a count, where defeating
@@ -321,24 +322,27 @@ content above, as opposed to authoring it. Delivered in three phases:
 
 **Follow-ups after the three phases:**
 
-- **A Campaign carries forward across sessions.** Nearly everything follows
-  the Campaign into its later sessions: the Party (names, Class, Subclass,
-  Heritage, notes), Combat and Notes tabs, pulled-in Adversaries and Environments with what's marked on
-  them, Fear, the music region, and the loot log. Only a session's name
-  belongs to that one session. An edit made in session N applies to N and
-  the sessions after it and **never rewrites an earlier one**. A delete acts
-  only on the session it's made in: push an Ogre out in session 3 and it's
-  gone from session 3 (sessions 1 and 2 still show it, and a session created
-  afterward starts from session 3's board, so it doesn't have it either).
-  *New Session* starts with the board as the last session left it,
-  suggesting the next "Session N"; *Clone Most Recent* lands at the end of
-  the timeline the same way. Deleting a session hands whatever it authored
-  to the next one so later sessions don't change. Session and Party-member
-  names are unique per Campaign rather than across the whole app, so two
-  Campaigns can each have a "Session 1". (GM note-taking lives in the
-  Journal bubble instead — an app-wide floating panel scoped per-Campaign,
-  not per-Session. A Campaign's *first* Session also inherits that
-  Campaign's own default Music region, if one is set.)
+- **A Campaign carries forward across sessions — except the board.** Most
+  things follow the Campaign into its later sessions: the Party (names,
+  Class, Subclass, Heritage, notes), Combat and Notes tabs, Fear, the music
+  region, and the loot log. An edit made in session N applies to N and the
+  sessions after it and **never rewrites an earlier one**. The board
+  (pulled-in Adversaries/Environments) is the deliberate exception: it's
+  scoped to the exact session it was pulled into and never carries, so
+  *New Session* always starts with an empty board to build fresh — a GM
+  shouldn't have to clear out last time's stat blocks by hand. *Clone Most
+  Recent* exists for the opposite case, a fight spanning a real-world
+  session boundary: it explicitly duplicates the source session's board
+  (an independent copy from the moment it's made) and otherwise lands at
+  the end of the timeline the same way a plain new session does. Deleting
+  a session hands what it authored to the next one so later sessions don't
+  change — except the board, which simply goes with it, since nothing was
+  ever inheriting it. Session and Party-member names are unique per
+  Campaign rather than across the whole app, so two Campaigns can each have
+  a "Session 1". (GM note-taking lives in the Journal bubble instead — an
+  app-wide floating panel scoped per-Campaign, not per-Session. A
+  Campaign's *first* Session also inherits that Campaign's own default
+  Music region, if one is set.)
 - **Campaign banners at a glance.** Each Campaign has a party level (1–10),
   and its banner shows that level and the players' names.
 - **Music library.** A tab under Campaigns: audio files are copied into the
@@ -567,10 +571,13 @@ session of this project), set `DAGGERHEART_DEV_PORT` to another port for
       the banner, and a per-region Music library, each region with one
       looping default track — switched by hand, scopable to one Campaign
       or left application-wide
-- [x] Campaign data carried across sessions (Party, board, Fear, loot log):
-      edits apply from a session onward and never rewrite earlier sessions,
-      a delete only acts on the session it's made in; only name stays
-      per-session
+- [x] Campaign data carried across sessions (Party, Combat/Notes tabs, Fear,
+      loot log): edits apply from a session onward and never rewrite
+      earlier sessions, a delete only acts on the session it's made in;
+      only name stays per-session. The board (pulled-in Adversaries/
+      Environments) is the deliberate exception — session-scoped, not
+      carried, so a fresh Session always starts with an empty board;
+      *Clone Most Recent* duplicates it explicitly instead
 - [x] Journal bubble: an app-wide floating panel for quick GM notes scoped
       per-Campaign, with categories mirroring the app's own content types
       (Adversaries/Loot/Consumables/Armor/Weapons/Worldbuilding/Other) —

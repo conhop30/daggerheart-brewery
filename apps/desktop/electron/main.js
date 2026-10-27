@@ -284,9 +284,11 @@ ipcMain.handle('store:listSessionEnvironmentsBySession', (_event, sessionId) =>
   store.listSessionEnvironmentsBySession(sessionId)
 );
 ipcMain.handle('store:create', (_event, collection, data) => lookup(CREATE, collection)(data));
-// `ctx` ({ sessionId }) says which Session an edit or delete is made in - only
-// the carried-forward collections (Party members, pulled-in Adversaries/
-// Environments) look at it; everything else ignores the extra argument.
+// `ctx` ({ sessionId }) says which Session an edit or delete is made in -
+// the carried-forward collections (Party members, Combat/Note tabs) route
+// on it, and the session-scoped ones (pulled-in Adversaries/Environments)
+// use it only as an ownership check; everything else ignores the extra
+// argument.
 ipcMain.handle('store:update', (_event, collection, id, patch, ctx) => lookup(UPDATE, collection)(id, patch, ctx));
 ipcMain.handle('store:remove', (_event, collection, id, ctx) => lookup(REMOVE, collection)(id, ctx));
 

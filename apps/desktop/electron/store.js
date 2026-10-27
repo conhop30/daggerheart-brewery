@@ -871,12 +871,17 @@ const transformations = makeCollection('transformations', {
 
 // ---- Carry-forward across sessions ----
 // A Campaign's data follows it from session to session (see carry.js for the
-// rules): Party members, pulled-in Adversaries/Environments, Fear, the music
-// region, and the loot log all carry; only a Session's own name stays put.
-// Editing or deleting inside session N reaches N and everything after it,
-// never the sessions before.
+// rules): Party members, Combat tabs, Note tabs, Fear, the music region, and
+// the loot log all carry; only a Session's own name — and, as of the next
+// section, what's pulled onto the board — stays put. Editing or deleting
+// inside session N reaches N and everything after it, never the sessions
+// before.
 
-const VERSIONED = ['partyMembers', 'sessionAdversaries', 'sessionEnvironments', 'combats', 'noteTabs'];
+const VERSIONED = ['partyMembers', 'combats', 'noteTabs'];
+// SessionAdversaries/SessionEnvironments deliberately do NOT carry: each
+// Session's board starts empty and is built by pulling Adversaries/
+// Environments in fresh (see makeSessionScopedCollection below for why).
+const SESSION_SCOPED = ['sessionAdversaries', 'sessionEnvironments'];
 const CARRIED_SESSION_FIELDS = ['fear', 'regionId'];
 
 function sessionOrder(store, campaignId) {
@@ -983,6 +988,76 @@ function makeVersionedCollection(key, { context, build, validate, uniqueByName =
     const campaignId = campaignIdOfVersion(store, first);
     const { order, sessionId } = editSession(store, campaignId, ctx);
     store[key] = carry.removeVersions(store[key], order, id, sessionId, randomUUID);
+  }
+
+  function remove(id, ctx) {
+    return mutate((store) => applyRemove(store, id, ctx));
+  }
+
+  return { list, listByCampaign, listBySession, create, update, remove, applyRemove };
+}
+
+// Like makeVersionedCollection, but for a collection that belongs to exactly
+// the Session it was created in — nothing carries forward, so there's no
+// lineage, no tombstone, and no "as of this session" resolution: an item
+// created in session 1 simply does not exist in session 2's eyes. Used for
+// SessionAdversaries/SessionEnvironments (see store there for the request
+// this came from — a GM wants each Session's board to start empty, not
+// inherit last time's stat blocks). ctx, when given to update/remove, is a
+// safety check (the record must belong to the session the caller says it's
+// editing from) rather than a routing decision the way it is for the carry-
+// forward version above.
+function makeSessionScopedCollection(key, { context, build, validate, present = (record) => record }) {
+  function list() {
+    return getCache()[key].map(present);
+  }
+  function listByCampaign(campaignId) {
+    return getCache()[key].filter((v) => v.campaignId === campaignId).map(present);
+  }
+  function listBySession(sessionId) {
+    return getCache()[key].filter((v) => v.sessionId === sessionId).map(present);
+  }
+
+  function create(data) {
+    return mutate((store) => {
+      const { campaignId, sessionId } = context(store, data);
+      if (validate) validate(store, data);
+      const record = build(store, data, { campaignId, sessionId });
+      store[key].push(record);
+      return present(record);
+    });
+  }
+
+  function assertOwnedBySession(record, id, ctx) {
+    if (ctx && ctx.sessionId != null && ctx.sessionId !== record.sessionId) {
+      throw new Error(`No record with id ${id} in session ${ctx.sessionId}`);
+    }
+  }
+
+  function update(id, patch, ctx) {
+    return mutate((store) => {
+      const record = store[key].find((v) => v.id === id);
+      if (!record) throw new Error(`No record with id ${id}`);
+      assertOwnedBySession(record, id, ctx);
+      const safePatch = { ...patch };
+      if (validate) validate(store, safePatch);
+      for (const field of Object.keys(safePatch)) {
+        if (safePatch[field] !== undefined && field !== 'id' && field !== 'campaignId' && field !== 'sessionId') {
+          record[field] = safePatch[field];
+        }
+      }
+      return present(record);
+    });
+  }
+
+  // Unwrapped from `mutate`, same reasoning as makeVersionedCollection's own
+  // applyRemove: removeCombatAndContents needs this atomically alongside
+  // other store writes, without nesting a second mutate() call.
+  function applyRemove(store, id, ctx) {
+    const index = store[key].findIndex((v) => v.id === id);
+    if (index === -1) throw new Error(`No record with id ${id}`);
+    assertOwnedBySession(store[key][index], id, ctx);
+    store[key].splice(index, 1);
   }
 
   function remove(id, ctx) {
@@ -1143,7 +1218,7 @@ function removeCampaign(id) {
     if (index === -1) throw new Error(`No campaign with id ${id}`);
     store.campaigns.splice(index, 1);
     const sessionIds = new Set(store.sessions.filter((s) => s.campaignId === id).map((s) => s.id));
-    for (const key of VERSIONED) {
+    for (const key of [...VERSIONED, ...SESSION_SCOPED]) {
       store[key] = store[key].filter((v) => v.campaignId !== id && !sessionIds.has(v.sessionId));
     }
     store.sessions = store.sessions.filter((s) => s.campaignId !== id);
@@ -1597,6 +1672,10 @@ function removeSession(id) {
     const next = store.sessions.find((s) => s.id === order[order.indexOf(id) + 1]);
 
     for (const key of VERSIONED) store[key] = carry.rehomeVersions(store[key], order, id);
+    // SessionAdversaries/SessionEnvironments never carried into this session
+    // in the first place, so there's nothing to hand to the next one — they
+    // just go away with it, same as a Combat tab's own contents do.
+    for (const key of SESSION_SCOPED) store[key] = store[key].filter((v) => v.sessionId !== id);
 
     if (next) {
       const has = (s, field) => Object.prototype.hasOwnProperty.call(s, field);
@@ -1611,21 +1690,27 @@ function removeSession(id) {
 }
 
 // ---- Session Adversaries / Session Environments ----
-// Versioned (see carry.js), not built with makeCollection. Pulling the same
-// Adversary into a session twice (two Ogres) must create two independent
-// items — idempotent-by-name create would collapse the second pull-in into
-// the first — and there's no user-supplied "name" to key that on anyway,
-// since name is snapshotted from the master record. So every create just
-// inserts, the same reasoning as GameSet.
+// Session-scoped (see makeSessionScopedCollection above), not built with
+// makeCollection. Pulling the same Adversary into a session twice (two
+// Ogres) must create two independent items — idempotent-by-name create
+// would collapse the second pull-in into the first — and there's no user-
+// supplied "name" to key that on anyway, since name is snapshotted from the
+// master record. So every create just inserts, the same reasoning as
+// GameSet.
 //
 // These are snapshots, not live references: the master Adversary/
 // Environment is only ever looked up at create time (inside the build
 // functions below), so editing or even deleting the master later can never
 // disturb a session already in progress. Daggerheart tracks HP/Stress as
 // *marked boxes* during play, not a countdown, hence hpMarked/stressMarked
-// starting at 0 against a snapshotted hpMax/stressMax. A pulled-in combatant
-// stays on the board in later sessions (with whatever was marked) until
-// someone pushes it out from some session on.
+// starting at 0 against a snapshotted hpMax/stressMax.
+//
+// Deliberately NOT carried into later sessions, unlike everything else in
+// a Session (Party, Fear, the music region, Combat/Note tabs): per-scene
+// exhaust/encounter state belongs to the scene it was pulled into, and a
+// fresh Session's board should start empty for the GM to build again, not
+// show every Adversary ever fought in this Campaign. Still scoped to a
+// Combat tab exactly as before (combatId) once pulled in through one.
 
 function sessionContext(store, data) {
   const session = store.sessions.find((s) => s.id === data.sessionId);
@@ -1710,7 +1795,7 @@ function normalizeConditionsForRead(conditions) {
   });
 }
 
-const sessionAdversaries = makeVersionedCollection('sessionAdversaries', {
+const sessionAdversaries = makeSessionScopedCollection('sessionAdversaries', {
   context: sessionContext,
   validate: validateSessionAdversary,
   present: presentSessionAdversary,
@@ -1762,7 +1847,7 @@ function validateSessionEnvironment(store, data) {
   if (data.pinned !== undefined) data.pinned = Boolean(data.pinned);
 }
 
-const sessionEnvironments = makeVersionedCollection('sessionEnvironments', {
+const sessionEnvironments = makeSessionScopedCollection('sessionEnvironments', {
   context: sessionContext,
   validate: validateSessionEnvironment,
   // combatId predates this collection's other fields too — same
@@ -1923,14 +2008,17 @@ function removeCombatAndContents(id, ctx) {
 
 // ---- Starting the next Session ----
 // "New Session" is just createSession: everything that carries is inherited
-// automatically, so it starts with the Party, the board, and Fear as the
-// previous session left them.
+// automatically, so it starts with the Party and Fear as the previous
+// session left them — but an empty board, since Adversaries/Environments
+// are deliberately session-scoped, not carried (see
+// makeSessionScopedCollection).
 //
-// "Clone Most Recent" is functionally the same now that a Session has no
-// non-carried field left to copy on top of that (the one that used to
-// exist, mode, is gone) — it still exists as its own entry point since nothing
-// asked for it to be removed, but it always lands at the end of the
-// timeline the same way a plain new session does.
+// "Clone Most Recent" exists for the opposite case — a fight that spans a
+// real-world session boundary — so unlike a plain new Session it explicitly
+// duplicates the source session's board (see cloneSession below) instead of
+// leaving it empty. Everything else about it is the same as a plain new
+// session: it always lands at the end of the timeline, and the duplicated
+// board is an independent copy from the moment it's made.
 
 function nextSessionName(name, taken) {
   const numbered = name.match(/^(.*?)(\d+)\s*$/);
@@ -1958,6 +2046,14 @@ function cloneSession(sourceId, { name } = {}) {
       lootRemoved: [],
     };
     store.sessions.push(copy);
+    // The board doesn't carry forward on its own (see SESSION_SCOPED), so a
+    // clone has to duplicate it explicitly — a fresh id per record, same
+    // combatId, so it still lands in whichever Combat tab carried forward.
+    for (const key of SESSION_SCOPED) {
+      for (const record of store[key].filter((v) => v.sessionId === sourceId)) {
+        store[key].push({ ...record, id: randomUUID(), sessionId: copy.id });
+      }
+    }
     return presentSession(store, copy);
   });
 }

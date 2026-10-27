@@ -3,9 +3,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-// The rule under test: nearly everything follows a Campaign into its later
-// sessions, but a change made in session N reaches only N and the sessions
-// after it — never the ones before.
+// The rule under test: Fear and the Party follow a Campaign into its later
+// sessions (a change made in session N reaches only N and the sessions
+// after it, never the ones before) — but the board (pulled-in Adversaries/
+// Environments) deliberately does NOT carry: each session starts with an
+// empty board to pull fresh combatants into.
 test.describe('Carrying a Campaign forward across sessions', () => {
   let tempDir: string;
   let app: ElectronApplication;
@@ -48,7 +50,12 @@ test.describe('Carrying a Campaign forward across sessions', () => {
     await win.click('button:has-text("Start Session")');
   }
 
-  test('Fear, the Party and the board carry forward; a change in a later session never rewrites an earlier one', async () => {
+  async function pullInOgre() {
+    await win.click('.combat-panel__pull-button:has-text("+ Add Adversary")');
+    await win.click('.item-picker__option:has-text("Ogre")');
+  }
+
+  test('Fear and the Party carry forward; the board does not — a fresh Session always starts empty', async () => {
     // An Adversary to pull in.
     await win.click('.create-panel__toggle');
     await win.click('.chip:text-is("Adversary")');
@@ -77,32 +84,33 @@ test.describe('Carrying a Campaign forward across sessions', () => {
 
     await win.getByRole('button', { name: 'Set Fear to 4' }).click();
 
-    await win.click('.combat-panel__pull-button:has-text("+ Add Adversary")');
-    await win.click('.item-picker__option:has-text("Ogre")');
+    await pullInOgre();
     await win.locator('.combat-panel .content-card').getByRole('button', { name: 'Decrease HP' }).click();
     await expect(ogreHp()).toHaveText('7 / 8');
     await win.click('.session-view__back');
 
-    // ---- Session 2 starts where Session 1 left off ----
+    // ---- Session 2 inherits Fear, but its board starts empty ----
     await newSession('Session 2');
     await openSession('Session 2');
     await expect(win.locator('.session-view__title')).toHaveText('Session 2');
     await expect(win.locator('.fear-track__value')).toHaveText('4 / 12');
-    await expect(ogreHp()).toHaveText('7 / 8');
+    await expect(win.locator('.combat-panel .content-card')).toHaveCount(0);
 
-    // Change things in Session 2.
+    // Pull a fresh Ogre into Session 2 and change things independently of Session 1's.
+    await pullInOgre();
+    await win.locator('.combat-panel .content-card').getByRole('button', { name: 'Decrease HP' }).click();
     await win.locator('.combat-panel .content-card').getByRole('button', { name: 'Decrease HP' }).click();
     await expect(ogreHp()).toHaveText('6 / 8');
     await win.getByRole('button', { name: 'Set Fear to 7' }).click();
     await win.click('.session-view__back');
 
-    // ---- Session 1 is exactly as it was ----
+    // ---- Session 1 is exactly as it was: its own Ogre, its own Fear ----
     await openSession('Session 1');
     await expect(win.locator('.fear-track__value')).toHaveText('4 / 12');
     await expect(ogreHp()).toHaveText('7 / 8');
     await win.click('.session-view__back');
 
-    // ---- Pushing the Ogre out in Session 2 removes it from 2 onward only ----
+    // ---- Removing Session 2's Ogre only ever touched Session 2's board ----
     await openSession('Session 2');
     await win.locator('.combat-panel .content-card').getByRole('button', { name: 'Remove' }).click();
     await expect(win.locator('.combat-panel .content-card')).toHaveCount(0);
@@ -110,12 +118,12 @@ test.describe('Carrying a Campaign forward across sessions', () => {
 
     await newSession('Session 3');
     await openSession('Session 3');
-    await expect(win.locator('.fear-track__value')).toHaveText('7 / 12');
-    await expect(win.locator('.combat-panel .content-card')).toHaveCount(0);
+    await expect(win.locator('.fear-track__value')).toHaveText('7 / 12'); // Fear still carries
+    await expect(win.locator('.combat-panel .content-card')).toHaveCount(0); // board starts empty, same as always
     await win.click('.session-view__back');
 
     await openSession('Session 1');
-    await expect(ogreHp()).toHaveText('7 / 8'); // still there in the session it was pulled into
+    await expect(ogreHp()).toHaveText('7 / 8'); // still there, untouched the whole time
   });
 
 });

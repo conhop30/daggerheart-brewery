@@ -392,6 +392,30 @@ overflow: hidden;`), which clips either child's edge-to-edge hover fill
 into one soft pill without touching the deliberate shared-divider
 "ethereal pair" layout documented in the comment just below it.
 
+Fixed 2026-10-26: a real reported bug — a Session's board (pulled-in
+SessionAdversaries/SessionEnvironments) used to carry forward exactly like
+everything else on a Campaign (Party, Fear, Combat/Notes tabs), so
+starting a brand-new Session still showed every stat block from the
+previous one, forcing the GM to clear it out by hand. Confirmed as an
+unwanted behavior (not a report about something else) via
+`AskUserQuestion` before touching code, since changing carry semantics
+affects the same mechanism several other collections still rely on.
+`sessionAdversaries`/`sessionEnvironments` were pulled out of store.js's
+`VERSIONED` array into a new `SESSION_SCOPED` one and now run on a new,
+simpler `makeSessionScopedCollection` factory instead of
+`makeVersionedCollection` — no lineage, no tombstones, no "as of this
+session" resolution; a record just belongs to exactly the session it was
+created in, full stop. `removeSession` now deletes a session's own board
+outright instead of re-homing it (there was never anything downstream
+inheriting it); `removeCampaign`'s cascade got the same two keys added to
+its filter. `cloneSession` ("Clone Most Recent") is the deliberate
+exception — it exists specifically for a fight spanning a real session
+boundary, so it now explicitly duplicates the source session's board
+(fresh ids, same `combatId`) since nothing does that for it automatically
+anymore. Party/Fear/music-region/Combat-tabs/Notes-tabs carry-forward is
+completely unchanged. `README.md`'s carry-forward section and roadmap
+checklist were corrected to stop saying "board" carries.
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)
