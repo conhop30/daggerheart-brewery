@@ -17,8 +17,10 @@ export function totalEntries(entries: { COMMON: unknown[]; UNCOMMON: unknown[]; 
   return RARITIES.reduce((sum, rarity) => sum + entries[rarity].length, 0);
 }
 
-// Loot and Consumable are both "name + optional description, nothing else" —
-// one card does for both rather than two near-identical copies.
+// Loot and Consumable are both "name + optional description, nothing else"
+// (Loot also has an optional `value` — the corebook's own roll/lookup
+// number, shown only when set, Consumable never has one) — one card does
+// for both rather than two near-identical copies.
 export const NameDescriptionCard = memo(function NameDescriptionCard({
   item,
   onEdit,
@@ -28,8 +30,14 @@ export const NameDescriptionCard = memo(function NameDescriptionCard({
   onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }) {
+  const value = 'value' in item ? item.value : null;
   return (
-    <ContentCard title={item.name} onEdit={() => onEdit(item.id)} onDelete={() => onDelete(item.id)}>
+    <ContentCard
+      title={item.name}
+      onEdit={() => onEdit(item.id)}
+      onDelete={() => onDelete(item.id)}
+      meta={value != null ? <MetaChip label="Value" value={value} /> : undefined}
+    >
       {item.description && <p className="content-card__description">{item.description}</p>}
     </ContentCard>
   );

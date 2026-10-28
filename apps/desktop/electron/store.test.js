@@ -379,6 +379,18 @@ describe('Loot / Consumable', () => {
     await expect(store.createLoot({ name: 'Trinket', gameSetId: 'missing' })).rejects.toThrow('No game set with id');
     await expect(store.createConsumable({ name: 'Potion', gameSetId: 'missing' })).rejects.toThrow('No game set with id');
   });
+
+  it("Loot accepts a value (the corebook's own roll/lookup number), defaulting to null and clamping like any other number field", async () => {
+    const gs = await store.createGameSet({ name: 'Core' });
+    const withValue = await store.createLoot({ name: 'Caltrops', value: 1, gameSetId: gs.id });
+    expect(withValue.value).toBe(1);
+
+    const withoutValue = await store.createLoot({ name: 'Homebrew Trinket', gameSetId: gs.id });
+    expect(withoutValue.value).toBeNull();
+
+    const updated = await store.updateLoot(withoutValue.id, { value: 0.6 });
+    expect(updated.value).toBe(1);
+  });
 });
 
 describe('CampaignFrame', () => {

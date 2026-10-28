@@ -762,12 +762,23 @@ function validateGameSetRef(store, data) {
   }
 }
 
+// value is the corebook's own roll/lookup number for this item within its
+// source table (e.g. Caltrops is "1" on the Hope & Fear Items table) — not
+// a price in gold. Nullable/unclamped-above like Weapon's tier: homebrew
+// Loot a GM types in by hand has no roll number to give it.
+function validateLoot(store, data) {
+  validateGameSetRef(store, data);
+  clampNumber(data, 'value', { min: 1 });
+}
+
 const loot = makeCollection('loot', {
-  validate: validateGameSetRef,
+  validate: validateLoot,
+  present: (_store, record) => ({ ...record, value: record.value ?? null }),
   buildRecord: (data) => ({
     id: randomUUID(),
     name: data.name,
     description: data.description ?? null,
+    value: data.value ?? null,
     gameSetId: data.gameSetId,
   }),
 });

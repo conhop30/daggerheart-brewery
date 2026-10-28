@@ -9,6 +9,7 @@ import type { EquipmentView } from '../lib/equipmentView';
 
 const LOOT_COLUMNS: EquipmentTableColumn<Loot>[] = [
   { key: 'name', label: 'Name', render: (l) => l.name, width: '1fr', emphasize: true },
+  { key: 'value', label: 'Value', render: (l) => dash(l.value), align: 'center', width: '0.5fr' },
   { key: 'description', label: 'Description', render: (l) => dash(l.description), width: '2.5fr' },
 ];
 
@@ -34,6 +35,7 @@ export default function LootSection({ loot, view }: { loot: ReturnType<typeof us
           <SimpleNameDescriptionForm
             title="Loot"
             submitLabel="Create Loot"
+            showValue
             create={lootApi.create}
             update={lootApi.update}
             onSaved={(saved) => {
@@ -49,6 +51,7 @@ export default function LootSection({ loot, view }: { loot: ReturnType<typeof us
           <SimpleNameDescriptionForm
             title="Loot"
             submitLabel="Create Loot"
+            showValue
             initial={editingLoot}
             create={lootApi.create}
             update={lootApi.update}
@@ -70,6 +73,7 @@ export default function LootSection({ loot, view }: { loot: ReturnType<typeof us
           <SimpleNameDescriptionForm
             title="Loot"
             submitLabel="Create Loot"
+            showValue
             initial={l}
             create={lootApi.create}
             update={lootApi.update}
