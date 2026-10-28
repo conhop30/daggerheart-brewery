@@ -90,6 +90,10 @@ function emptyStore() {
   const store = { version: STORE_VERSION };
   for (const key of COLLECTIONS) store[key] = [];
   ensureDefaultRegion(store);
+  // A brand-new store has nothing for migrateCarriedSessionScopedRecords to
+  // do, so mark it migrated up front rather than recomputing that no-op
+  // every time it's loaded — see that function for what this flag guards.
+  store.sessionScopedCarryMigrated = true;
   return store;
 }
 
@@ -186,12 +190,65 @@ function readStoreFromDisk() {
     if (!Array.isArray(store[key])) store[key] = [];
   }
   ensureDefaultRegion(store);
+  if (!store.sessionScopedCarryMigrated) {
+    migrateCarriedSessionScopedRecords(store, 'sessionAdversaries');
+    migrateCarriedSessionScopedRecords(store, 'sessionEnvironments');
+    // Marks this exact migration moment, not "this store has ever been
+    // migrated" in general — see the function's own comment for why this
+    // has to be a one-shot flag rather than a per-row shape check.
+    store.sessionScopedCarryMigrated = true;
+    scheduleWrite(store);
+  }
   // Loot log entries predate ids; carrying them forward (and removing one
   // from a later session on) needs each to be addressable.
   for (const session of store.sessions) {
     for (const entry of session.lootLog ?? []) if (!entry.id) entry.id = randomUUID();
   }
   return store;
+}
+
+// One-time migration: SessionAdversaries/SessionEnvironments used to be
+// versioned via carry.js (like Combats/PartyMembers/Note tabs still are)
+// before they switched to being flat and session-scoped (see
+// makeSessionScopedCollection and SESSION_SCOPED below) so a fresh Session's
+// board starts empty. A store written by the older code still has every row
+// in the *old* shape on disk — each tagged only to the one session it was
+// last edited in, plus lineage/tombstone bookkeeping rows besides — so the
+// new flat listBySession, which just matches sessionId directly, only shows
+// a session the handful of rows that happen to carry its own id: usually a
+// small fraction of what carry.js's resolution actually showed that session
+// under the old system. Confirmed against a real user's live data: a
+// Session that should have shown 26 Adversaries (per carry.js) showed only
+// 3 — a real "my Adversaries got wiped" regression, not a display quirk.
+//
+// Can't tell old rows from new ones by shape: an item pulled in once and
+// never edited in a later session looks identical either way (no lineageId
+// either way — see carry.js's own doc comment), which is the common case,
+// not an edge case. So this isn't gated per-row; it's a one-shot pass over
+// the *entire* collection, gated by `sessionScopedCarryMigrated` on the
+// store itself (set right after, see caller). It resolves every campaign's
+// Sessions in creation order exactly as carry.js used to and replaces the
+// whole collection with the result, one flat snapshot per Session — which
+// is safe precisely because it only ever runs once, at the moment a store
+// first loads under this fix: every row that exists at that moment predates
+// the fix by definition, and nothing created afterward (by the new flat
+// create(), which never sets `sessionScopedCarryMigrated` back off) is ever
+// run through this again.
+function migrateCarriedSessionScopedRecords(store, key) {
+  const rows = store[key];
+  const migrated = [];
+  for (const campaign of store.campaigns) {
+    const order = sessionOrder(store, campaign.id);
+    const versions = rows.filter((v) => campaignIdOfVersion(store, v) === campaign.id);
+    if (versions.length === 0) continue;
+    for (const sessionId of order) {
+      for (const resolved of carry.resolveVersions(versions, order, sessionId)) {
+        const { carried: _carried, id: _lineageId, sessionId: _origSessionId, campaignId: _origCampaignId, ...rest } = resolved;
+        migrated.push({ ...rest, id: randomUUID(), campaignId: campaign.id, sessionId });
+      }
+    }
+  }
+  store[key] = migrated;
 }
 
 function getCache() {

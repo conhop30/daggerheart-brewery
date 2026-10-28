@@ -2177,6 +2177,50 @@ describe('Carrying data across Sessions', () => {
       expect(store.listSessionAdversariesBySession(sessions[0].id).map((a) => a.id)).not.toContain('tombstone-1');
       expect(store.listSessionEnvironmentsBySession(sessions[0].id).map((e) => e.id)).not.toContain('tombstone-2');
     });
+
+    it('a store written entirely under the old carry-forward system has its board migrated once to flat per-Session snapshots', async () => {
+      // Regression test for the real follow-up bug: the tombstone fix above
+      // only covers rows that were edited into a second version. The common
+      // case — an Adversary pulled in once and never touched again — has NO
+      // lineageId either way (see carry.js's own doc comment), so it's
+      // indistinguishable by shape from a brand-new flat row. Confirmed
+      // against a real user's live data: a Session that should have shown
+      // 26 Adversaries (per carry.js, as it behaved before this fix existed)
+      // showed only 3 under the plain flat read — not a crash, a quiet "my
+      // Adversaries got wiped" regression on every pre-existing Session.
+      const { c, sessions } = await board();
+      store.flushPendingWrite();
+      const raw = JSON.parse(fs.readFileSync(path.join(tempDir, 'data.json'), 'utf-8'));
+      delete raw.sessionScopedCarryMigrated; // simulate a data.json that predates this fix entirely
+      raw.sessionAdversaries = [
+        // Pulled into session 0, never touched again — should still show in every later session.
+        { id: 'never-touched', campaignId: c.id, sessionId: sessions[0].id, adversaryId: 'x', name: 'Ogre A', thresholds: { major: 1, severe: 2 } },
+        // Pulled into session 0, then removed in session 1 — shows in 0 only.
+        { id: 'removed-in-1', campaignId: c.id, sessionId: sessions[0].id, adversaryId: 'x', name: 'Ogre B', thresholds: { major: 1, severe: 2 } },
+        { id: 'removed-in-1-tombstone', lineageId: 'removed-in-1', campaignId: c.id, sessionId: sessions[1].id, deleted: true },
+        // Pulled in fresh during session 1 — shows in 1 and 2, not 0.
+        { id: 'joined-in-1', campaignId: c.id, sessionId: sessions[1].id, adversaryId: 'x', name: 'Ogre C', thresholds: { major: 1, severe: 2 } },
+      ];
+      fs.writeFileSync(path.join(tempDir, 'data.json'), JSON.stringify(raw));
+      store.__resetCacheForTests();
+
+      const namesIn = (i) => store.listSessionAdversariesBySession(sessions[i].id).map((a) => a.name).sort();
+      expect(namesIn(0)).toEqual(['Ogre A', 'Ogre B']);
+      expect(namesIn(1)).toEqual(['Ogre A', 'Ogre C']);
+      expect(namesIn(2)).toEqual(['Ogre A', 'Ogre C']);
+
+      // Idempotent: reloading again (the flag is now set and persisted) must
+      // not re-resolve and duplicate anything.
+      store.flushPendingWrite();
+      store.__resetCacheForTests();
+      expect(namesIn(0)).toEqual(['Ogre A', 'Ogre B']);
+      expect(namesIn(1)).toEqual(['Ogre A', 'Ogre C']);
+
+      // A Session created after the migration still starts empty — the
+      // no-carry-forward fix this follow-up is built on top of still holds.
+      const freshSession = await store.createSession({ campaignId: c.id, name: 'Session 4' });
+      expect(store.listSessionAdversariesBySession(freshSession.id)).toHaveLength(0);
+    });
   });
 
   describe('Combats', () => {
