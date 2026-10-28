@@ -1027,15 +1027,28 @@ function makeVersionedCollection(key, { context, build, validate, uniqueByName =
 // safety check (the record must belong to the session the caller says it's
 // editing from) rather than a routing decision the way it is for the carry-
 // forward version above.
-function makeSessionScopedCollection(key, { context, build, validate, present = (record) => record }) {
+// `isLive`, when given, is a read-time filter applied before `present` — not
+// a validation rule, a way to hide rows that predate this function itself.
+// Before SessionAdversaries/SessionEnvironments became session-scoped, they
+// were versioned (lineage + lastDeleted-tombstone, see makeVersionedCollection
+// above), and carrying a tombstone from one session into the next meant
+// writing a *new row* for the lineage with no snapshot fields at all, just
+// {id, lineageId, campaignId, sessionId, deleted:true} — the old listBySession
+// resolved that away via lineage. The flat filter below has no lineage to
+// resolve through, so without `isLive` those leftover rows read back as a
+// SessionAdversary/SessionEnvironment missing every field the frontend
+// assumes exists (name, adversaryId, thresholds, ...), crashing the Session
+// that opens them. Confirmed against the real store: every such row has
+// `deleted: true` and is missing its collection's own foreign key.
+function makeSessionScopedCollection(key, { context, build, validate, present = (record) => record, isLive = () => true }) {
   function list() {
-    return getCache()[key].map(present);
+    return getCache()[key].filter(isLive).map(present);
   }
   function listByCampaign(campaignId) {
-    return getCache()[key].filter((v) => v.campaignId === campaignId).map(present);
+    return getCache()[key].filter((v) => v.campaignId === campaignId && isLive(v)).map(present);
   }
   function listBySession(sessionId) {
-    return getCache()[key].filter((v) => v.sessionId === sessionId).map(present);
+    return getCache()[key].filter((v) => v.sessionId === sessionId && isLive(v)).map(present);
   }
 
   function create(data) {
@@ -1819,6 +1832,7 @@ const sessionAdversaries = makeSessionScopedCollection('sessionAdversaries', {
   context: sessionContext,
   validate: validateSessionAdversary,
   present: presentSessionAdversary,
+  isLive: (record) => record.adversaryId !== undefined,
   build(store, data, { campaignId, sessionId }) {
     const adversary = store.adversaries.find((a) => a.id === data.adversaryId);
     if (!adversary) throw new Error(`No adversary with id ${data.adversaryId}`);
@@ -1874,6 +1888,7 @@ const sessionEnvironments = makeSessionScopedCollection('sessionEnvironments', {
   // treatment as presentSessionAdversary's, see its comment.
   // pinned (shown full-width above the board) came later.
   present: (record) => ({ ...record, combatId: record.combatId ?? null, pinned: record.pinned ?? false }),
+  isLive: (record) => record.environmentId !== undefined,
   build(store, data, { campaignId, sessionId }) {
     const environment = store.environments.find((e) => e.id === data.environmentId);
     if (!environment) throw new Error(`No environment with id ${data.environmentId}`);

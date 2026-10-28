@@ -2141,6 +2141,42 @@ describe('Carrying data across Sessions', () => {
       expect(presented.thresholdsModifier).toEqual({ major: null, severe: null });
       expect(presented.conditions).toEqual([{ name: '', count: 1 }]);
     });
+
+    it('a tombstone row left over from before carry-forward was removed is hidden, not crashed on', async () => {
+      // Regression test: before SessionAdversary/SessionEnvironment switched
+      // from carrying forward (makeVersionedCollection) to session-scoped
+      // (this session's own bug), carrying a *deleted* pull-in into a later
+      // session wrote a new row for the lineage with no snapshot fields at
+      // all — {id, lineageId, campaignId, sessionId, deleted:true}. The old
+      // listBySession resolved that away via lineage; the flat filter has no
+      // lineage to resolve through, so that row read back as a
+      // SessionAdversary missing name/adversaryId/thresholds/etc, and the
+      // frontend crashed the whole Session reading `.thresholds.major` off
+      // it. Confirmed against a real user's live data.json, which still had
+      // 38 such rows across 5 Sessions after upgrading.
+      const { c, sessions } = await board();
+      store.flushPendingWrite();
+      const raw = JSON.parse(fs.readFileSync(path.join(tempDir, 'data.json'), 'utf-8'));
+      raw.sessionAdversaries.push({
+        id: 'tombstone-1',
+        lineageId: 'some-lineage',
+        campaignId: c.id,
+        sessionId: sessions[0].id,
+        deleted: true,
+      });
+      raw.sessionEnvironments.push({
+        id: 'tombstone-2',
+        lineageId: 'some-other-lineage',
+        campaignId: c.id,
+        sessionId: sessions[0].id,
+        deleted: true,
+      });
+      fs.writeFileSync(path.join(tempDir, 'data.json'), JSON.stringify(raw));
+      store.__resetCacheForTests();
+
+      expect(store.listSessionAdversariesBySession(sessions[0].id).map((a) => a.id)).not.toContain('tombstone-1');
+      expect(store.listSessionEnvironmentsBySession(sessions[0].id).map((e) => e.id)).not.toContain('tombstone-2');
+    });
   });
 
   describe('Combats', () => {
