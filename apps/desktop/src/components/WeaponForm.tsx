@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { weaponsApi, type Burden, type DamageType, type Weapon, type WeaponSlot, type WeaponTrait } from '../api/weapons';
+import {
+  weaponsApi,
+  type Burden,
+  type DamageType,
+  type Weapon,
+  type WeaponRange,
+  type WeaponSlot,
+  type WeaponTrait,
+} from '../api/weapons';
 import GameSetSelect from './GameSetSelect';
 import TextField from './TextField';
 import TextAreaField from './TextAreaField';
@@ -18,6 +26,7 @@ interface WeaponFormProps {
 
 const TRAITS: WeaponTrait[] = ['AGILITY', 'PRESENCE', 'INSTINCT', 'KNOWLEDGE', 'FINESSE', 'STRENGTH'];
 const DAMAGE_TYPES: DamageType[] = ['PHYSICAL', 'MAGICAL'];
+const RANGES: WeaponRange[] = ['MELEE', 'VERY_CLOSE', 'CLOSE', 'FAR', 'VERY_FAR'];
 
 export default function WeaponForm({ weaponSlot, initial, onSaved, onCancel }: WeaponFormProps) {
   const isEditing = initial != null;
@@ -31,6 +40,7 @@ export default function WeaponForm({ weaponSlot, initial, onSaved, onCancel }: W
   const [damage, setDamage] = useState(initial?.damage ?? '');
   const [trait, setTrait] = useState<WeaponTrait | ''>(initial?.trait ?? '');
   const [damageType, setDamageType] = useState<DamageType | ''>(initial?.damageType ?? '');
+  const [range, setRange] = useState<WeaponRange | ''>(initial?.range ?? '');
   const [gameSetId, setGameSetId] = useState<string>(initial?.gameSetId ?? '');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,6 +64,7 @@ export default function WeaponForm({ weaponSlot, initial, onSaved, onCancel }: W
       damage,
       trait: trait || null,
       damageType: damageType || null,
+      range: range || null,
       gameSetId,
     };
     try {
@@ -97,14 +108,24 @@ export default function WeaponForm({ weaponSlot, initial, onSaved, onCancel }: W
           ))}
         </SelectField>
       </div>
-      <SelectField label="Damage Type" value={damageType} onChange={(v) => setDamageType(v as DamageType | '')}>
-        <option value="">Not yet chosen</option>
-        {DAMAGE_TYPES.map((type) => (
-          <option key={type} value={type}>
-            {titleCaseEnum(type)}
-          </option>
-        ))}
-      </SelectField>
+      <div className="create-form__row">
+        <SelectField label="Damage Type" value={damageType} onChange={(v) => setDamageType(v as DamageType | '')}>
+          <option value="">Not yet chosen</option>
+          {DAMAGE_TYPES.map((type) => (
+            <option key={type} value={type}>
+              {titleCaseEnum(type)}
+            </option>
+          ))}
+        </SelectField>
+        <SelectField label="Range" value={range} onChange={(v) => setRange(v as WeaponRange | '')}>
+          <option value="">Not yet chosen</option>
+          {RANGES.map((r) => (
+            <option key={r} value={r}>
+              {titleCaseEnum(r)}
+            </option>
+          ))}
+        </SelectField>
+      </div>
       <GameSetSelect value={gameSetId} onChange={setGameSetId} />
       {error && <p className="create-form__error">{error}</p>}
       <div className="create-form__actions">

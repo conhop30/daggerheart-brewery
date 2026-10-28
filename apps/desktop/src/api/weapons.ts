@@ -4,6 +4,7 @@ export type WeaponSlot = 'PRIMARY' | 'SECONDARY';
 export type Burden = 'ONE_HANDED' | 'TWO_HANDED';
 export type WeaponTrait = 'AGILITY' | 'PRESENCE' | 'INSTINCT' | 'KNOWLEDGE' | 'FINESSE' | 'STRENGTH';
 export type DamageType = 'PHYSICAL' | 'MAGICAL';
+export type WeaponRange = 'MELEE' | 'VERY_CLOSE' | 'CLOSE' | 'FAR' | 'VERY_FAR';
 
 export interface Weapon {
   id: string;
@@ -15,6 +16,7 @@ export interface Weapon {
   damage: string | null;
   trait: WeaponTrait | null;
   damageType: DamageType | null;
+  range: WeaponRange | null;
   gameSetId: string;
 }
 
@@ -27,6 +29,7 @@ export interface CreateWeaponRequest {
   damage?: string;
   trait?: WeaponTrait | null;
   damageType?: DamageType | null;
+  range?: WeaponRange | null;
   gameSetId: string;
 }
 

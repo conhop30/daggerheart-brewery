@@ -455,6 +455,44 @@ Two real bugs surfaced and fixed building this, both in
    an externally-changed `value` prop into the live editor via its own
    effect instead, comparing against the last value it itself emitted.)
 
+Added 2026-10-27: Weapon gained a real `range` field (MELEE/VERY_CLOSE/
+CLOSE/FAR/VERY_FAR — `WEAPON_RANGES` in store.js, reusing the same five
+bands as an Adversary's `attackRange` minus `OUT_OF_RANGE`, since a Weapon
+always has a real range in the book). Came up while importing the
+corebook's four Primary/Secondary Weapon tables (~312 weapons) into
+Connor's own local data as Loot-style verbatim content: the schema had
+nowhere to put each row's Range column at all. `src/api/weapons.ts`,
+`WeaponForm.tsx` (new Range `<select>` next to Damage Type), and
+`WeaponsSection.tsx` (filter dimension, table column, card chip) all
+followed the same optional/nullable pattern `trait`/`damageType` already
+use. Old records read `range: null` via `present()`, same treatment as
+every other field added after a collection already had live data.
+
+While importing that same data directly into `~/.daggerheart-hub/data.json`
+via a one-off script (`store.createWeapon`/`store.createLoot` calls, not
+through the UI — 300+ records by hand would've been impractical), a real
+gotcha surfaced: `makeCollection`'s duplicate-name check has no `scope`
+for `weapons` (unlike most other collections), so it's global across every
+Game Set and weaponSlot, not just within one. A separate, unrelated
+process had already written 152 weapons into that same file before this
+script ran (visible only by diffing against a pre-import backup) — their
+names collided with Core/Hope & Fear Primary names from the same corebook
+table, so `createWeapon` silently returned those existing records instead
+of creating new ones, and the script's own freshly-built (name, range,
+clean feature) data for those specific weapons was quietly dropped on the
+floor. Caught by comparing the on-disk record count against the expected
+312 rather than trusting the script's own "created" tally. Recovered by
+backing up, then running a second repair pass that updates each of those
+152 in place (parses "Range: X." back out of a Feature-text workaround
+some other tool had used, sets the real field, strips the prefix) instead
+of deleting and recreating, and separately removes 3 further corrupted
+records from that same process whose weapon *name* had a stray "phy/mag"
+damage-type suffix baked into it. Lesson for next time doing a bulk
+programmatic import against a shared, long-lived local data file: diff
+record counts against a pre-run backup before trusting an import script's
+own success count, especially for any collection whose duplicate check
+isn't scoped.
+
 See `TODO.md` for the live backlog. Its completed entries were cleared on 2026-10-07; wherever this file says "see `TODO.md`'s ... entry", that entry is now in git history (`TODO.md` as of commit `d1a8669`). (`QUESTIONS.md` — logged blockers
 from unattended work — gets created on demand and deleted once empty; if
 it's not present, there's nothing currently blocked on Connor's input.)

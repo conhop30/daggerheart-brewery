@@ -689,11 +689,15 @@ const environments = makeCollection('environments', {
 });
 
 // Kept in sync by hand with src/api/weapons.ts's WeaponSlot/Burden/
-// WeaponTrait/DamageType unions.
+// WeaponTrait/DamageType/WeaponRange unions.
 const WEAPON_SLOTS = ['PRIMARY', 'SECONDARY'];
 const BURDENS = ['ONE_HANDED', 'TWO_HANDED'];
 const WEAPON_TRAITS = ['AGILITY', 'PRESENCE', 'INSTINCT', 'KNOWLEDGE', 'FINESSE', 'STRENGTH'];
 const DAMAGE_TYPES = ['PHYSICAL', 'MAGICAL'];
+// Same five bands as an Adversary's attackRange (ATTACK_RANGES above), minus
+// OUT_OF_RANGE — a Weapon always has a real range in the book, there's no
+// "this weapon has no range" case the way an unarmed Adversary has no attack.
+const WEAPON_RANGES = ['MELEE', 'VERY_CLOSE', 'CLOSE', 'FAR', 'VERY_FAR'];
 
 // Burden locked to One-Handed when WeaponSlot = Secondary — enforced here,
 // not just as a UI default, per the spec.
@@ -702,6 +706,7 @@ function validateWeapon(_store, data) {
   requireEnum(data, 'burden', BURDENS);
   requireEnum(data, 'trait', WEAPON_TRAITS);
   requireEnum(data, 'damageType', DAMAGE_TYPES);
+  requireEnum(data, 'range', WEAPON_RANGES);
   clampNumber(data, 'tier', { min: 1 });
   if (data.weaponSlot === 'SECONDARY' && data.burden !== 'ONE_HANDED') {
     throw new Error('A Secondary weapon must be One-Handed.');
@@ -716,6 +721,9 @@ function validateArmor(_store, data) {
 
 const weapons = makeCollection('weapons', {
   validate: validateWeapon,
+  // range predates this field's addition, so an older record reads as null
+  // rather than crashing — same treatment as trait/damageType above it.
+  present: (_store, record) => ({ ...record, range: record.range ?? null }),
   buildRecord: (data) => ({
     id: randomUUID(),
     weaponSlot: data.weaponSlot,
@@ -726,6 +734,7 @@ const weapons = makeCollection('weapons', {
     damage: data.damage ?? null,
     trait: data.trait ?? null,
     damageType: data.damageType ?? null,
+    range: data.range ?? null,
     gameSetId: data.gameSetId,
   }),
 });

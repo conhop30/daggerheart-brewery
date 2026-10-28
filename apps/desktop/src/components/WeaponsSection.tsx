@@ -16,12 +16,14 @@ const WEAPON_FILTERS: FilterDimension<Weapon>[] = [
   { key: 'burden', label: 'Burden', getValue: (w) => w.burden, formatValue: titleCaseEnum },
   { key: 'trait', label: 'Trait', getValue: (w) => w.trait, formatValue: titleCaseEnum },
   { key: 'damageType', label: 'Damage Type', getValue: (w) => w.damageType, formatValue: titleCaseEnum },
+  { key: 'range', label: 'Range', getValue: (w) => w.range, formatValue: titleCaseEnum },
 ];
 
 const WEAPON_COLUMNS: EquipmentTableColumn<Weapon>[] = [
   { key: 'name', label: 'Name', render: (w) => w.name, width: '1.4fr', emphasize: true },
   { key: 'slot', label: 'Slot', render: (w) => titleCaseEnum(w.weaponSlot) },
   { key: 'tier', label: 'Tier', render: (w) => dash(w.tier), align: 'center', width: '0.6fr' },
+  { key: 'range', label: 'Range', render: (w) => dash(w.range && titleCaseEnum(w.range)) },
   { key: 'burden', label: 'Burden', render: (w) => titleCaseEnum(w.burden) },
   { key: 'damage', label: 'Damage', render: (w) => dash(w.damage), align: 'center' },
   { key: 'trait', label: 'Trait', render: (w) => dash(w.trait && titleCaseEnum(w.trait)) },
@@ -47,6 +49,7 @@ const WeaponCard = memo(function WeaponCard({
         <>
           <MetaChip label="Slot" value={titleCaseEnum(w.weaponSlot)} />
           <MetaChip label="Tier" value={w.tier} />
+          <MetaChip label="Range" value={w.range && titleCaseEnum(w.range)} />
           <MetaChip label="Burden" value={titleCaseEnum(w.burden)} />
           <MetaChip label="Damage" value={w.damage} />
           <MetaChip label="Trait" value={w.trait && titleCaseEnum(w.trait)} />

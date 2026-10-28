@@ -272,6 +272,36 @@ describe('Weapon', () => {
     ).rejects.toThrow('trait must be one of');
   });
 
+  it('accepts a real range, rejects an unknown one, and reads null when unset', async () => {
+    const w = await store.createWeapon({
+      weaponSlot: 'PRIMARY',
+      name: 'Longbow',
+      burden: 'TWO_HANDED',
+      range: 'VERY_FAR',
+      gameSetId: 'gs-1',
+    });
+    expect(w.range).toBe('VERY_FAR');
+
+    const noRange = await store.createWeapon({ weaponSlot: 'PRIMARY', name: 'Plain Sword', burden: 'ONE_HANDED', gameSetId: 'gs-1' });
+    expect(noRange.range).toBeNull();
+
+    await expect(
+      store.createWeapon({ weaponSlot: 'PRIMARY', name: 'Confused Blade', burden: 'ONE_HANDED', range: 'ADJACENT', gameSetId: 'gs-1' })
+    ).rejects.toThrow('range must be one of');
+  });
+
+  it('a record written before range existed is presented with a safe default, not crashed on', async () => {
+    const w = await store.createWeapon({ weaponSlot: 'PRIMARY', name: 'Old Blade', burden: 'ONE_HANDED', gameSetId: 'gs-1' });
+    store.flushPendingWrite();
+    const raw = JSON.parse(fs.readFileSync(path.join(tempDir, 'data.json'), 'utf-8'));
+    const record = raw.weapons.find((r) => r.id === w.id);
+    delete record.range;
+    fs.writeFileSync(path.join(tempDir, 'data.json'), JSON.stringify(raw));
+    store.__resetCacheForTests();
+
+    expect(store.listWeapons().find((r) => r.id === w.id).range).toBeNull();
+  });
+
   it('clamps a non-numeric tier instead of persisting NaN', async () => {
     const w = await store.createWeapon({
       weaponSlot: 'PRIMARY',
